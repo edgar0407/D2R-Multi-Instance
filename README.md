@@ -7,7 +7,7 @@
 ### 1. 下載必要工具
 - 前往 [Sysinternals Handle 下載頁面](https://learn.microsoft.com/en-us/sysinternals/downloads/handle)
 - 下載 Handle.zip 並解壓縮
-- 將 `handle64.exe` 放到指定路徑（例如 `E:\LocatTools\Handle\handle64.exe`）
+- 將 `handle64.exe` 放到指定路徑（例如 `D:\D2R多開\Handle\handle64.exe`）
 
 ### 2. 設定腳本
 編輯 `D2R_Launcher.ps1` 開頭的設定：
