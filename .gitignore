@@ -1,0 +1,17 @@
+# Log files
+logs/
+*.log
+
+# Windows thumbnail cache
+Thumbs.db
+ehthumbs.db
+
+# Folder config file
+Desktop.ini
+
+# Recycle Bin
+$RECYCLE.BIN/
+
+# Temporary files
+*.tmp
+*.temp
