@@ -1,46 +1,46 @@
-# ==========================================
-# D2R ¦h¶}±Ò°Ê¾¹
+ï»¿# ==========================================
+# D2R å¤šé–‹å•Ÿå‹•å™¨
 # ==========================================
 
 #Requires -RunAsAdministrator
 
 # ==========================================
-# ¨BÆJ 1 of 2: ±b¸¹³]©w (¦b¦¹­×§ï)
+# è¨­å®š 1 of 2: å¸³è™Ÿè¨­å®š (è«‹è‡ªè¡Œä¿®æ”¹)
 # ==========================================
 $Accounts = @(
     @{
-        Username = "±b¸¹1"
-        Password = "±K½X1"
-        DisplayName = "±b¸¹1 Åã¥Ü¦W¤l"
+        Username = "å¸³è™Ÿ1"
+        Password = "å¯†ç¢¼1"
+        DisplayName = "å°åœŸ"
         Server = "kr"
         LaunchArgs = "-mod LiYuiMod -txt -w"
     }
     @{
-        Username = "±b¸¹2"
-        Password = "±K½X2"
-        DisplayName = "±b¸¹2 Åã¥Ü¦W¤l"
+        Username = "å¸³è™Ÿ2"
+        Password = "å¯†ç¢¼2"
+        DisplayName = "å°ä½‘"
         Server = "kr"
         LaunchArgs = "-mod LiYuiMod -txt -w"
     }
 )
 
 # ==========================================
-# ¨BÆJ 2 of 2: ¥Ø¿ı³]©w
+# è¨­å®š 2 of 2: è·¯å¾‘è¨­å®š
 # ==========================================
 $ScriptPath = Split-Path -Parent $MyInvocation.MyCommand.Path
 
-# Handle.exe ¸ô®|
-$HandleExePath = "D:\D2R¦h¶}\Handle\handle64.exe"
-$TempFilePath = "D:\D2R¦h¶}\Handle\handles.txt"
+# Handle.exe è·¯å¾‘
+$HandleExePath = "D:\D2Rå¤šé–‹\Handle\handle64.exe"
+$TempFilePath = "D:\D2Rå¤šé–‹\Handle\handles.txt"
 
-# D2R ¹CÀ¸¸ô®|
+# D2R éŠæˆ²è·¯å¾‘
 $D2RGamePath = "D:\Diablo II Resurrected\D2R.exe"
 
-# ¤é»x¥Ø¿ı
+# æ—¥èªŒè·¯å¾‘
 $LogDir = Join-Path $ScriptPath "logs"
 
 # ==========================================
-# ¦øªA¾¹¦ì§}¹ïÀ³
+# ä¼ºæœå™¨åœ°å€å°æ‡‰è¡¨
 # ==========================================
 $ServerAddresses = @{
     "us" = "us.actual.battle.net"
@@ -49,27 +49,164 @@ $ServerAddresses = @{
 }
 
 # ==========================================
-# ÅçÃÒ¥²­nÀÉ®×
+# Windows API å®šç¾© - ç”¨æ–¼ä¿®æ”¹è¦–çª—æ¨™é¡Œ
+# ==========================================
+Add-Type @"
+using System;
+using System.Runtime.InteropServices;
+using System.Text;
+
+public class WindowAPI {
+    [DllImport("user32.dll", CharSet = CharSet.Auto)]
+    public static extern IntPtr FindWindow(string lpClassName, string lpWindowName);
+
+    [DllImport("user32.dll", CharSet = CharSet.Auto)]
+    public static extern bool SetWindowText(IntPtr hWnd, string lpString);
+
+    [DllImport("user32.dll")]
+    public static extern IntPtr GetWindowThreadProcessId(IntPtr hWnd, out int lpdwProcessId);
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool EnumWindows(EnumWindowsProc lpEnumFunc, IntPtr lParam);
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool IsWindowVisible(IntPtr hWnd);
+
+    [DllImport("user32.dll", CharSet = CharSet.Auto)]
+    public static extern int GetWindowText(IntPtr hWnd, StringBuilder lpString, int nMaxCount);
+
+    [DllImport("user32.dll")]
+    public static extern int GetWindowTextLength(IntPtr hWnd);
+
+    public delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
+}
+"@
+
+# ==========================================
+# å‡½æ•¸: å–å¾—æ‰€æœ‰ D2R è¦–çª—çš„ Handle (è¿”å› Handle é™£åˆ—)
+# ==========================================
+function Get-D2RWindowHandles {
+    # å®šç¾©ç‚º script ä½œç”¨åŸŸè®Šæ•¸ï¼Œè®“ callback å¯ä»¥å­˜å–
+    $script:Handles = New-Object System.Collections.ArrayList
+
+    $Callback = {
+        param([IntPtr]$hWnd, [IntPtr]$lParam)
+
+        $IsVisible = [WindowAPI]::IsWindowVisible($hWnd)
+
+        if ($IsVisible) {
+            $Length = [WindowAPI]::GetWindowTextLength($hWnd)
+            if ($Length -gt 0) {
+                $StringBuilder = New-Object System.Text.StringBuilder($Length + 1)
+                [WindowAPI]::GetWindowText($hWnd, $StringBuilder, $StringBuilder.Capacity) | Out-Null
+                $Title = $StringBuilder.ToString()
+
+                # æª¢æŸ¥æ˜¯å¦ç‚º D2R è¦–çª—
+                if ($Title -match "Diablo.*Resurrected" -or $Title -eq "Diablo II: Resurrected") {
+                    [void]$script:Handles.Add($hWnd)
+                }
+            }
+        }
+        return $true
+    }
+
+    $CallbackDelegate = [WindowAPI+EnumWindowsProc]$Callback
+    [WindowAPI]::EnumWindows($CallbackDelegate, [IntPtr]::Zero) | Out-Null
+
+    return $script:Handles
+}
+
+# ==========================================
+# å‡½æ•¸: æ‰¾å‡ºæ–°è¦–çª—ä¸¦è¨­å®šæ¨™é¡Œ
+# ==========================================
+function Set-NewD2RWindowTitle {
+    param(
+        [System.Collections.ArrayList]$OldHandles,
+        [string]$NewTitle,
+        [int]$MaxRetries = 10,
+        [int]$RetryDelaySeconds = 1
+    )
+
+    Write-Host "  [åµæ¸¬] é–‹å§‹å°‹æ‰¾æ–°çš„ D2R è¦–çª—..." -ForegroundColor Gray
+    Write-Host "  [åµæ¸¬] å•Ÿå‹•å‰å·²æœ‰ $($OldHandles.Count) å€‹ D2R è¦–çª—" -ForegroundColor Gray
+
+    for ($retry = 1; $retry -le $MaxRetries; $retry++) {
+        try {
+            # å–å¾—ç•¶å‰æ‰€æœ‰ D2R è¦–çª—
+            $CurrentHandles = Get-D2RWindowHandles
+
+            Write-Host "  [åµæ¸¬] ç¬¬ $retry æ¬¡æª¢æŸ¥ï¼Œç›®å‰æœ‰ $($CurrentHandles.Count) å€‹ D2R è¦–çª—" -ForegroundColor Gray
+
+            # æ‰¾å‡ºæ–°è¦–çª—ï¼ˆä¸åœ¨èˆŠæ¸…å–®ä¸­ä¸”å­˜åœ¨çš„ Handleï¼‰
+            foreach ($Handle in $CurrentHandles) {
+                if ($Handle -notin $OldHandles) {
+                    # å–å¾—è¦–çª—è³‡è¨Š
+                    $ProcID = 0
+                    [WindowAPI]::GetWindowThreadProcessId($Handle, [ref]$ProcID) | Out-Null
+
+                    $Length = [WindowAPI]::GetWindowTextLength($Handle)
+                    if ($Length -gt 0) {
+                        $StringBuilder = New-Object System.Text.StringBuilder($Length + 1)
+                        [WindowAPI]::GetWindowText($Handle, $StringBuilder, $StringBuilder.Capacity) | Out-Null
+                        $OldTitle = $StringBuilder.ToString()
+                    } else {
+                        $OldTitle = "(ç„¡æ¨™é¡Œ)"
+                    }
+
+                    Write-Host "  [åµæ¸¬] æ‰¾åˆ°æ–°è¦–çª— - Handle: $Handle, PID: $ProcID, åŸæ¨™é¡Œ: '$OldTitle'" -ForegroundColor Gray
+
+                    # è¨­å®šæ–°æ¨™é¡Œ
+                    $Result = [WindowAPI]::SetWindowText($Handle, $NewTitle)
+                    if ($Result) {
+                        Write-Host "  [æˆåŠŸ] æˆåŠŸè¨­å®šè¦–çª—æ¨™é¡Œç‚º: '$NewTitle'" -ForegroundColor Gray
+                        Write-Log "æˆåŠŸè¨­å®šè¦–çª—æ¨™é¡Œ: '$NewTitle' (Handle: $Handle, PID: $ProcID, å˜—è©¦: $retry)" "SUCCESS"
+                        return $true
+                    } else {
+                        Write-Host "  [è­¦å‘Š] SetWindowText å¤±æ•—" -ForegroundColor Gray
+                        Write-Log "SetWindowText å¤±æ•— (Handle: $Handle)" "WARNING"
+                    }
+                }
+            }
+
+            if ($retry -lt $MaxRetries) {
+                Write-Host "  [åµæ¸¬] ç¬¬ $retry æ¬¡å˜—è©¦ï¼šå°šæœªæ‰¾åˆ°æ–°è¦–çª—ï¼Œç­‰å¾… $RetryDelaySeconds ç§’å¾Œé‡è©¦..." -ForegroundColor Gray
+                Start-Sleep -Seconds $RetryDelaySeconds
+            }
+        }
+        catch {
+            Write-Host "  [éŒ¯èª¤] ç™¼ç”Ÿä¾‹å¤– (å˜—è©¦: $retry): $_" -ForegroundColor Gray
+            Write-Log "è¨­å®šè¦–çª—æ¨™é¡Œæ™‚ç™¼ç”Ÿä¾‹å¤– (å˜—è©¦: $retry): $_" "ERROR"
+        }
+    }
+
+    Write-Log "è¨­å®šè¦–çª—æ¨™é¡Œå¤±æ•—ï¼šå·²é”æœ€å¤§å˜—è©¦æ¬¡æ•¸" "ERROR"
+    return $false
+}
+
+# ==========================================
+# æª¢æŸ¥å¿…è¦æª”æ¡ˆæ˜¯å¦å­˜åœ¨
 # ==========================================
 if (-not (Test-Path $HandleExePath)) {
-    Write-Host "¿ù»~: §ä¤£¨ì handle64.exe¡A¸ô®|: $HandleExePath" -ForegroundColor Red
-    Read-Host "«ö Enter Áä°h¥X"
+    Write-Host "éŒ¯èª¤: æ‰¾ä¸åˆ° handle64.exeï¼Œè·¯å¾‘: $HandleExePath" -ForegroundColor Red
+    Read-Host "æŒ‰ Enter é€€å‡º"
     exit 1
 }
 
 if (-not (Test-Path $D2RGamePath)) {
-    Write-Host "¿ù»~: §ä¤£¨ì D2R ¹CÀ¸¡A¸ô®|: $D2RGamePath" -ForegroundColor Red
-    Read-Host "«ö Enter Áä°h¥X"
+    Write-Host "éŒ¯èª¤: æ‰¾ä¸åˆ° D2R éŠæˆ²ï¼Œè·¯å¾‘: $D2RGamePath" -ForegroundColor Red
+    Read-Host "æŒ‰ Enter é€€å‡º"
     exit 1
 }
 
-# «Ø¥ß¤é»x¥Ø¿ı
+# å»ºç«‹æ—¥èªŒç›®éŒ„
 if (-not (Test-Path $LogDir)) {
     New-Item -ItemType Directory -Path $LogDir | Out-Null
 }
 
 # ==========================================
-# ¨ç¼Æ: ¼g¤J¤é»x
+# å‡½æ•¸: å¯«å…¥æ—¥èªŒ
 # ==========================================
 function Write-Log {
     param([string]$Message, [string]$Level = "INFO")
@@ -78,7 +215,7 @@ function Write-Log {
     $LogFile = Join-Path $LogDir "D2R_Launch_$(Get-Date -Format 'yyyyMMdd').log"
     $LogMessage = "[$Timestamp] [$Level] $Message"
 
-    # ¨Ï¥Î mutex Á×§K¦h­Ó¹ê¨Ò¦P®É¼g¤J¤é»xÀÉ®×®Éµo¥Í½Ä¬ğ
+    # ä½¿ç”¨ mutex é¿å…å¤šé€²ç¨‹åŒæ™‚å¯«å…¥æ—¥èªŒæª”æ¡ˆç™¼ç”ŸéŒ¯èª¤
     try {
         $Mutex = New-Object System.Threading.Mutex($false, "D2RLauncherLogMutex")
         [void]$Mutex.WaitOne()
@@ -87,74 +224,74 @@ function Write-Log {
         $Mutex.Dispose()
     }
     catch {
-        # ©¿²¤¤é»x¼g¤J¿ù»~
+        # å¿½ç•¥æ—¥èªŒå¯«å…¥éŒ¯èª¤
     }
 }
 
 # ==========================================
-# ¨ç¼Æ: Ãö³¬ D2R Handles
+# å‡½æ•¸: é—œé–‰ D2R Handles
 # ==========================================
 function Close-D2RHandles {
     try {
-        # °õ¦æ handle.exe ¨Ã¿é¥X¨ìÁ{®ÉÀÉ®×
+        # åŸ·è¡Œ handle.exe è¼¸å‡ºæ‰€æœ‰é€²ç¨‹è³‡è¨Š
         $HandleOutput = & $HandleExePath -a "Check For Other Instances" -nobanner 2>&1
 
         if ($LASTEXITCODE -ne 0 -and $HandleOutput -notmatch "No matching handles found") {
-            Write-Log "Äµ§i: handle.exe °õ¦æ²§±`" "WARNING"
+            Write-Log "è­¦å‘Š: handle.exe åŸ·è¡Œç•°å¸¸" "WARNING"
         }
 
-        # Àx¦s¿é¥X¨ìÀÉ®×
+        # å„²å­˜è¼¸å‡ºåˆ°æª”æ¡ˆ
         $HandleOutput | Out-File -FilePath $TempFilePath -Encoding UTF8
 
-        # ¨Ï¥Î tokens=3,6 ¤èªk¸ÑªR¨ÃÃö³¬ handles
+        # ä½¿ç”¨ tokens=3,6 æ–¹æ³•ä¾†é—œé–‰æ‰€æœ‰ handles
         $CloseCount = 0
         $Lines = Get-Content $TempFilePath
 
         foreach ($Line in $Lines) {
-            # ¥ÎªÅ®æ¤À³Î¨Ã¨ú±o²Ä 3 ©M²Ä 6 ­Ó token (ProcessID ©M Handle ID)
+            # ä»¥ç©ºç™½åˆ†éš”å–å¾—ç¬¬ 3 å’Œç¬¬ 6 å€‹ token (ProcessID å’Œ Handle ID)
             $Tokens = $Line -split '\s+' | Where-Object { $_ -ne '' }
 
             if ($Tokens.Count -ge 6) {
                 $ProcessID = $Tokens[2]        # Token 3 (0-indexed = 2)
                 $HandleIDRaw = $Tokens[5]      # Token 6 (0-indexed = 5)
-                $HandleID = $HandleIDRaw -replace ':',''  # ²¾°£«_¸¹
+                $HandleID = $HandleIDRaw -replace ':',''  # ç§»é™¤å†’è™Ÿ
 
-                # ÅçÃÒ ProcessID ¬O¼Æ¦r¥B HandleID ¬O¤Q¤»¶i¦ì
+                # ç¢ºèª ProcessID æ˜¯æ•¸å­—ã€HandleID æ˜¯åå…­é€²åˆ¶
                 if ($ProcessID -match '^\d+$' -and $HandleID -match '^[0-9A-Fa-f]+$') {
-                    Write-Log "µo²{ handle - ¶iµ{ ID: $ProcessID, Handle ID: $HandleID"
+                    Write-Log "ç™¼ç¾ handle - é€²ç¨‹ ID: $ProcessID, Handle ID: $HandleID"
 
-                    # Ãö³¬ handle
+                    # é—œé–‰ handle
                     $CloseResult = & $HandleExePath -p $ProcessID -c $HandleID -y 2>&1
 
                     if ($LASTEXITCODE -eq 0) {
-                        Write-Log "¦¨¥\Ãö³¬ handle: $HandleID" "SUCCESS"
+                        Write-Log "æˆåŠŸé—œé–‰ handle: $HandleID" "SUCCESS"
                         $CloseCount++
                     } else {
-                        Write-Log "µLªkÃö³¬ handle: $HandleID - $CloseResult" "ERROR"
+                        Write-Log "ç„¡æ³•é—œé–‰ handle: $HandleID - $CloseResult" "ERROR"
                     }
                 }
             }
         }
 
         if ($CloseCount -eq 0) {
-            Write-Host "  [ª¬ºA] ¨S¦³»İ­nÃö³¬ªº handles" -ForegroundColor Gray
-            Write-Log "¨S¦³µo²{»İ­nÃö³¬ªº handles"
+            Write-Host "  [è³‡è¨Š] æ²’æœ‰éœ€è¦é—œé–‰çš„ handles" -ForegroundColor Gray
+            Write-Log "æ²’æœ‰ç™¼ç¾éœ€è¦é—œé–‰çš„ handles"
         } else {
-            Write-Host "  [ª¬ºA] ¦¨¥\Ãö³¬ $CloseCount ­Ó handles" -ForegroundColor Green
-            Write-Log "Á`¦@Ãö³¬¤F $CloseCount ­Ó handles" "SUCCESS"
+            Write-Host "  [è³‡è¨Š] æˆåŠŸé—œé–‰ $CloseCount å€‹ handles" -ForegroundColor Green
+            Write-Log "ç¸½å…±é—œé–‰äº† $CloseCount å€‹ handles" "SUCCESS"
         }
 
         return $true
     }
     catch {
-        Write-Host "  [¿ù»~] Ãö³¬ handles ®Éµo¥Í¿ù»~: $_" -ForegroundColor Red
-        Write-Log "Ãö³¬ handles ®Éµo¥Í¿ù»~: $_" "ERROR"
+        Write-Host "  [éŒ¯èª¤] é—œé–‰ handles æ™‚ç™¼ç”ŸéŒ¯èª¤: $_" -ForegroundColor Red
+        Write-Log "é—œé–‰ handles æ™‚ç™¼ç”ŸéŒ¯èª¤: $_" "ERROR"
         return $false
     }
 }
 
 # ==========================================
-# ¨ç¼Æ: ±Ò°Ê D2R
+# å‡½æ•¸: å•Ÿå‹• D2R
 # ==========================================
 function Start-D2R {
     param(
@@ -162,87 +299,104 @@ function Start-D2R {
         [string]$Password,
         [string]$DisplayName,
         [string]$Server = "",
-        [string]$LaunchArgs = ""
+        [string]$LaunchArgs = "",
+        [int]$AccountNumber = 0
     )
 
     Write-Host ""
     Write-Host "================================================" -ForegroundColor Cyan
-    Write-Host "  ±Ò°Ê±b¸¹: $DisplayName" -ForegroundColor Yellow
+    Write-Host "  æ­£åœ¨å•Ÿå‹•: $DisplayName" -ForegroundColor Yellow
     Write-Host "================================================" -ForegroundColor Cyan
 
     try {
-        # «Ø¥ß§¹¾ãªº±Ò°Ê°Ñ¼Æ°}¦C
+        # åœ¨å•Ÿå‹•å‰ï¼Œè¨˜éŒ„ç¾æœ‰è¦–çª—çš„ D2R è¦–çª—
+        $WindowsBeforeLaunch = Get-D2RWindowHandles
+        Write-Host "  [åµæ¸¬] å•Ÿå‹•å‰å·²æœ‰ $($WindowsBeforeLaunch.Count) å€‹ D2R è¦–çª—" -ForegroundColor Gray
+
+        # æ§‹å»ºéŠæˆ²å•Ÿå‹•åƒæ•¸åˆ—è¡¨
         $ArgsList = @()
         $ArgsList += "-username"
         $ArgsList += $Username
         $ArgsList += "-password"
         $ArgsList += $Password
 
-        # ¥[¤J¦øªA¾¹¦ì§}
+        # åŠ å…¥ä¼ºæœå™¨åœ°å€
         if ($Server -and $ServerAddresses.ContainsKey($Server.ToLower())) {
             $ServerAddress = $ServerAddresses[$Server.ToLower()]
             $ArgsList += "-address"
             $ArgsList += $ServerAddress
-            Write-Host "  [¦øªA¾¹] $Server" -ForegroundColor Cyan
-            Write-Log "¦øªA¾¹: $Server ($ServerAddress)" "INFO"
+            Write-Host "  [ä¼ºæœå™¨] $Server" -ForegroundColor Cyan
+            Write-Log "ä¼ºæœå™¨: $Server ($ServerAddress)" "INFO"
         }
 
-        # ¥[¤J¦Û­q±Ò°Ê°Ñ¼Æ
+        # åŠ å…¥è‡ªè¨‚åƒæ•¸
         if ($LaunchArgs) {
             $LaunchArgs.Split(' ') | ForEach-Object {
                 if ($_.Trim()) {
                     $ArgsList += $_.Trim()
                 }
             }
-            Write-Host "  [±Ò°Ê°Ñ¼Æ] $LaunchArgs" -ForegroundColor Cyan
-            Write-Log "¨Ï¥Î°Ñ¼Æ: $LaunchArgs" "INFO"
+            Write-Host "  [å•Ÿå‹•åƒæ•¸] $LaunchArgs" -ForegroundColor Cyan
+            Write-Log "ä½¿ç”¨åƒæ•¸: $LaunchArgs" "INFO"
         }
 
-        # ±Ò°Ê¹CÀ¸
-        Write-Host "  [°Ê§@] ¥¿¦b±Ò°Ê¹CÀ¸..." -ForegroundColor White
+        # å•Ÿå‹•éŠæˆ²
+        Write-Host "  [åŸ·è¡Œ] æ­£åœ¨å•Ÿå‹•éŠæˆ²..." -ForegroundColor White
         $ProcessInfo = Start-Process -FilePath $D2RGamePath -ArgumentList $ArgsList -PassThru
 
         if ($ProcessInfo) {
-            Write-Host "  [¦¨¥\] ¹CÀ¸¤w±Ò°Ê (PID: $($ProcessInfo.Id))" -ForegroundColor Green
-            Write-Log "D2R ¶iµ{¤w±Ò°Ê - PID: $($ProcessInfo.Id)" "SUCCESS"
-            Write-Log "D2R ¤w±Ò°Ê - $DisplayName" "SUCCESS"
+            Write-Host "  [æˆåŠŸ] éŠæˆ²å·²å•Ÿå‹• (PID: $($ProcessInfo.Id))" -ForegroundColor Green
+            Write-Log "D2R é€²ç¨‹å·²å•Ÿå‹• - PID: $($ProcessInfo.Id)" "SUCCESS"
+            Write-Log "D2R å·²å•Ÿå‹• - $DisplayName" "SUCCESS"
         } else {
-            Write-Host "  [Äµ§i] µLªk¨ú±o¶iµ{¸ê°T" -ForegroundColor Yellow
-            Write-Log "µLªk¨ú±o¶iµ{¸ê°T" "WARNING"
+            Write-Host "  [è­¦å‘Š] ç„¡æ³•å–å¾—é€²ç¨‹è³‡è¨Š" -ForegroundColor Yellow
+            Write-Log "ç„¡æ³•å–å¾—é€²ç¨‹è³‡è¨Š" "WARNING"
         }
 
-        # µ¥«İ¹CÀ¸ªì©l¤Æ
-        Write-Host "  [µ¥«İ] ¹CÀ¸ªì©l¤Æ¤¤ (3 ¬í)..." -ForegroundColor White
+        # ç­‰å¾…éŠæˆ²è¦–çª—åˆå§‹åŒ–
+        Write-Host "  [ç­‰å¾…] éŠæˆ²è¦–çª—åˆå§‹åŒ–ä¸­ (3 ç§’)..." -ForegroundColor White
         Start-Sleep -Seconds 3
 
-        # Ãö³¬ handle
-        Write-Host "  [°Ê§@] Ãö³¬¹ê¨ÒÀË¬d handle..." -ForegroundColor White
-        if (-not (Close-D2RHandles)) {
-            Write-Host "  [Äµ§i] µLªkÃö³¬ handles" -ForegroundColor Yellow
-            Write-Log "µLªkÃö³¬ handles" "WARNING"
+        # è¨­å®šæ–°è¦–çª—çš„æ¨™é¡Œ
+        if ($AccountNumber -gt 0) {
+            $WindowTitle = "D2R: $AccountNumber - $DisplayName"
+            Write-Host "  [åŸ·è¡Œ] è¨­å®šè¦–çª—æ¨™é¡Œ: $WindowTitle" -ForegroundColor White
+            $TitleResult = Set-NewD2RWindowTitle -OldHandles $WindowsBeforeLaunch -NewTitle $WindowTitle -MaxRetries 10 -RetryDelaySeconds 1
+            if ($TitleResult) {
+                Write-Host "  [æˆåŠŸ] è¦–çª—æ¨™é¡Œå·²è¨­å®š" -ForegroundColor Green
+            } else {
+                Write-Host "  [è­¦å‘Š] ç„¡æ³•è¨­å®šè¦–çª—æ¨™é¡Œ" -ForegroundColor Yellow
+            }
         }
 
-        # µ¥«İ«áÄò±Ò°Ê
-        Write-Host "  [µ¥«İ] ·Ç³Æ±Ò°Ê¤U¤@­Ó¹ê¨Ò (3 ¬í)..." -ForegroundColor White
+        # é—œé–‰ handleï¼ˆå…è¨±ä¸‹ä¸€å€‹å¯¦ä¾‹å•Ÿå‹•ï¼‰
+        Write-Host "  [åŸ·è¡Œ] æª¢æŸ¥ä¸¦é—œé–‰ handle..." -ForegroundColor White
+        if (-not (Close-D2RHandles)) {
+            Write-Host "  [è­¦å‘Š] ç„¡æ³•é—œé–‰ handles" -ForegroundColor Yellow
+            Write-Log "ç„¡æ³•é—œé–‰ handles" "WARNING"
+        }
+
+        # ç­‰å¾…å¾Œç¹¼çºŒ
+        Write-Host "  [ç­‰å¾…] æº–å‚™ä¸‹ä¸€å€‹éŠæˆ² (3 ç§’)..." -ForegroundColor White
         Write-Host "================================================" -ForegroundColor Cyan
         Start-Sleep -Seconds 3
     }
     catch {
-        Write-Host "  [¿ù»~] ±Ò°Ê¥¢±Ñ: $($_.Exception.Message)" -ForegroundColor Red
-        Write-Log "±Ò°Ê D2R ®Éµo¥Í¿ù»~: $_" "ERROR"
+        Write-Host "  [éŒ¯èª¤] å•Ÿå‹•å¤±æ•—: $($_.Exception.Message)" -ForegroundColor Red
+        Write-Log "å•Ÿå‹• D2R æ™‚ç™¼ç”ŸéŒ¯èª¤: $_" "ERROR"
     }
 }
 
 # ==========================================
-# ¥Dµ{¦¡
+# ä¸»é¸å–®
 # ==========================================
 function Show-Menu {
     Clear-Host
     Write-Host "========================================" -ForegroundColor Cyan
-    Write-Host "         D2R ¦h¶}±Ò°Ê¾¹" -ForegroundColor Cyan
+    Write-Host "         D2R å¤šé–‹å•Ÿå‹•å™¨" -ForegroundColor Cyan
     Write-Host "========================================" -ForegroundColor Cyan
     Write-Host ""
-    Write-Host "¥i¥Î±b¸¹:" -ForegroundColor White
+    Write-Host "å¯ç”¨å¸³è™Ÿ:" -ForegroundColor White
     Write-Host ""
 
     for ($i = 0; $i -lt $Accounts.Count; $i++) {
@@ -250,49 +404,51 @@ function Show-Menu {
     }
 
     Write-Host ""
-    Write-Host "  [A] ±Ò°Ê©Ò¦³±b¸¹" -ForegroundColor Green
-    Write-Host "  [C] ¥uÃö³¬ Handles (¤£±Ò°Ê¹CÀ¸)" -ForegroundColor Magenta
-    Write-Host "  [Q] °h¥X" -ForegroundColor Red
+    Write-Host "  [A] å•Ÿå‹•æ‰€æœ‰å¸³è™Ÿ" -ForegroundColor Green
+    Write-Host "  [C] åƒ…é—œé–‰ Handles (ä¸å•Ÿå‹•éŠæˆ²)" -ForegroundColor Magenta
+    Write-Host "  [Q] é€€å‡º" -ForegroundColor Red
     Write-Host ""
     Write-Host "========================================" -ForegroundColor Cyan
 }
 
-# ¥D°j°é
+# ä¸»è¿´åœˆ
 do {
     Show-Menu
-    $Choice = Read-Host "½Ğ¿ï¾Ü"
+    $Choice = Read-Host "è«‹é¸æ“‡"
 
     switch ($Choice.ToUpper()) {
         "A" {
             Write-Host ""
-            Write-Host "¶}©l§å¦¸±Ò°Ê©Ò¦³±b¸¹..." -ForegroundColor Green
-            foreach ($Account in $Accounts) {
-                Start-D2R -Username $Account.Username -Password $Account.Password -DisplayName $Account.DisplayName -Server $Account.Server -LaunchArgs $Account.LaunchArgs
+            Write-Host "é–‹å§‹å•Ÿå‹•æ‰€æœ‰å¸³è™Ÿ..." -ForegroundColor Green
+            for ($i = 0; $i -lt $Accounts.Count; $i++) {
+                $Account = $Accounts[$i]
+                Start-D2R -Username $Account.Username -Password $Account.Password -DisplayName $Account.DisplayName -Server $Account.Server -LaunchArgs $Account.LaunchArgs -AccountNumber ($i + 1)
             }
             Write-Host ""
-            Write-Host "©Ò¦³±b¸¹¤w±Ò°Ê§¹¦¨¡I" -ForegroundColor Green
-            Read-Host "«ö Enter ªğ¦^¿ï³æ"
+            Write-Host "æ‰€æœ‰å¸³è™Ÿå·²å•Ÿå‹•å®Œç•¢ï¼" -ForegroundColor Green
+            Read-Host "æŒ‰ Enter è¿”å›é¸å–®"
         }
         "C" {
             Write-Host ""
-            Write-Host "°õ¦æ Handle Ãö³¬§@·~..." -ForegroundColor Magenta
+            Write-Host "åŸ·è¡Œ Handle æ¸…ç†ä½œæ¥­..." -ForegroundColor Magenta
             Close-D2RHandles
             Write-Host ""
-            Read-Host "«ö Enter ªğ¦^¿ï³æ"
+            Read-Host "æŒ‰ Enter è¿”å›é¸å–®"
         }
         "Q" {
-            Write-Log "°h¥Xµ{¦¡"
+            Write-Log "çµæŸç¨‹å¼"
             exit 0
         }
         default {
             if ($Choice -match '^\d+$' -and [int]$Choice -ge 1 -and [int]$Choice -le $Accounts.Count) {
-                $SelectedAccount = $Accounts[[int]$Choice - 1]
-                Start-D2R -Username $SelectedAccount.Username -Password $SelectedAccount.Password -DisplayName $SelectedAccount.DisplayName -Server $SelectedAccount.Server -LaunchArgs $SelectedAccount.LaunchArgs
+                $AccountIndex = [int]$Choice - 1
+                $SelectedAccount = $Accounts[$AccountIndex]
+                Start-D2R -Username $SelectedAccount.Username -Password $SelectedAccount.Password -DisplayName $SelectedAccount.DisplayName -Server $SelectedAccount.Server -LaunchArgs $SelectedAccount.LaunchArgs -AccountNumber ([int]$Choice)
                 Write-Host ""
-                Read-Host "«ö Enter ªğ¦^¿ï³æ"
+                Read-Host "æŒ‰ Enter è¿”å›é¸å–®"
             } else {
                 Write-Host ""
-                Write-Host "µL®Äªº¿ï¶µ¡I½Ğ­«·s¿ï¾Ü¡C" -ForegroundColor Red
+                Write-Host "ç„¡æ•ˆé¸æ“‡ï¼è«‹é‡æ–°è¼¸å…¥" -ForegroundColor Red
                 Start-Sleep -Seconds 1
             }
         }
