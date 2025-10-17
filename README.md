@@ -113,3 +113,11 @@ D2R多開/
 - 優化時序避免啟動失敗
 - 使用 Mutex 避免日誌衝突
 - 轉換為 UTF-8 with BOM 編碼（支援 PowerShell 中文顯示）
+
+## 截圖展示
+
+### 啟動選單
+![啟動選單](./images/Menu.jpg)
+
+### 執行結果
+![執行結果](./images/Result.jpg)
