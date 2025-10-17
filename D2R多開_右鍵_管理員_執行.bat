@@ -1,23 +1,23 @@
 @echo off
 chcp 950 >nul 2>&1
-title D2R ï¿½hï¿½}ï¿½Ò°Ê¾ï¿½
+title D2R ¦h¶}±Ò°Ê¾¹
 
 echo ========================================
-echo    ï¿½ï¿½ï¿½bï¿½Ò°ï¿½ D2R ï¿½hï¿½}ï¿½Ò°Ê¾ï¿½...
+echo    ¥¿¦b±Ò°Ê D2R ¦h¶}±Ò°Ê¾¹...
 echo ========================================
 echo.
 
-REM ï¿½Ë¬dï¿½Oï¿½_ï¿½Hï¿½Þ²zï¿½ï¿½ï¿½vï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+REM ÀË¬d¬O§_¥HºÞ²z­ûÅv­­°õ¦æ
 net session >nul 2>&1
 if %errorLevel% neq 0 (
-    echo ï¿½ï¿½ï¿½~: ï¿½Ý­nï¿½Þ²zï¿½ï¿½ï¿½vï¿½ï¿½ï¿½I
-    echo ï¿½Ð¥kï¿½ï¿½ï¿½Iï¿½ï¿½ï¿½ï¿½ï¿½É®×¡Aï¿½ï¿½Ü¡uï¿½Hï¿½tï¿½ÎºÞ²zï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½v
+    echo ¿ù»~: »Ý­nºÞ²z­ûÅv­­¡I
+    echo ½Ð¥kÁäÂIÀ»¦¹ÀÉ®×¡A¿ï¾Ü¡u¥H¨t²ÎºÞ²z­û¨­¤À°õ¦æ¡v
     echo.
     pause
     exit /b 1
 )
 
-REM ï¿½ï¿½ï¿½ï¿½ PowerShell ï¿½}ï¿½ï¿½
+REM °õ¦æ PowerShell ¸}¥»
 powershell -ExecutionPolicy Bypass -File "%~dp0D2R_Launcher.ps1"
 
 pause
