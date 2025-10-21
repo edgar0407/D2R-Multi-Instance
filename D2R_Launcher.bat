@@ -1,38 +1,39 @@
 @echo off
 chcp 65001 >nul
 :: ==========================================
-:: D2R å¤šé–‹å•Ÿå‹•å™¨ - å•Ÿå‹•è…³æœ¬
+:: D2R ¦h¶}±Ò°Ê¾¹ - ±Ò°Ê¸}¥»
 :: ==========================================
 
 echo ========================================
-echo   D2R å¤šé–‹å•Ÿå‹•å™¨ vb0.9.1
+echo   D2R ¦h¶}±Ò°Ê¾¹ vb0.9.1
 echo ========================================
 echo.
 
-:: æª¢æŸ¥ä¸¦è§£é™¤æª”æ¡ˆå°é– (é‡å°å¾ GitHub ä¸‹è¼‰çš„æƒ…æ³)
-echo [1/2] æª¢æŸ¥æª”æ¡ˆå°é–ç‹€æ…‹...
-powershell.exe -ExecutionPolicy Bypass -Command "if (Get-Item '%~dp0D2R_Launcher.ps1' -Stream Zone.Identifier -ErrorAction SilentlyContinue) { Write-Host '      åµæ¸¬åˆ°æª”æ¡ˆè¢«å°é–ï¼Œæ­£åœ¨è§£é™¤...' -ForegroundColor Yellow; Get-ChildItem -Path '%~dp0' -Recurse -ErrorAction SilentlyContinue | Unblock-File -ErrorAction SilentlyContinue; Write-Host '      âœ“ æª”æ¡ˆå°é–å·²è§£é™¤' -ForegroundColor Green } else { Write-Host '      âœ“ æª”æ¡ˆç‹€æ…‹æ­£å¸¸' -ForegroundColor Green }"
+:: ÀË¬d¨Ã¸Ñ°£ÀÉ®×«ÊÂê (°w¹ï±q GitHub ¤U¸üªº±¡ªp)
+echo [1/2] ÀË¬dÀÉ®×«ÊÂêª¬ºA...
+powershell.exe -ExecutionPolicy Bypass -Command "if (Get-Item '%~dp0D2R_Launcher.ps1' -Stream Zone.Identifier -ErrorAction SilentlyContinue) { Write-Host '      °»´ú¨ìÀÉ®×³Q«ÊÂê¡A¥¿¦b¸Ñ°£...' -ForegroundColor Yellow; Get-ChildItem -Path '%~dp0' -Recurse -ErrorAction SilentlyContinue | Unblock-File -ErrorAction SilentlyContinue; Write-Host '      ? ÀÉ®×«ÊÂê¤w¸Ñ°£' -ForegroundColor Green } else { Write-Host '      ? ÀÉ®×ª¬ºA¥¿±`' -ForegroundColor Green }"
 
 echo.
-echo [2/2] æ­£åœ¨å•Ÿå‹• PowerShell è…³æœ¬...
+echo [2/2] ¥¿¦b±Ò°Ê PowerShell ¸}¥»...
 echo.
 
-:: å•Ÿå‹• PowerShell è…³æœ¬
+:: ±Ò°Ê PowerShell ¸}¥»
 powershell.exe -ExecutionPolicy Bypass -File "%~dp0D2R_Launcher.ps1"
 
-:: æª¢æŸ¥åŸ·è¡Œçµæœ
+:: ¥u¦bµo¥Í¯u¥¿ªº¿ù»~®É¤~Åã¥Ü¿ù»~°T®§
+:: ª`·N: ´£Åv­«±Ò®É ERRORLEVEL ¬° 0¡A©Ò¥H¤£·|Ä²µo¿ù»~°T®§
 if %ERRORLEVEL% NEQ 0 (
     echo.
     echo ========================================
-    echo   åŸ·è¡ŒçµæŸ (éŒ¯èª¤ä»£ç¢¼: %ERRORLEVEL%)
+    echo   °õ¦æµo¥Í¿ù»~ - ¿ù»~¥N½X: %ERRORLEVEL%
     echo ========================================
     echo.
-    echo å¯èƒ½çš„åŸå› :
-    echo   1. ä½¿ç”¨è€…æ‹’çµ• UAC æ¬Šé™æç¤º
-    echo   2. è…³æœ¬åŸ·è¡Œéç¨‹ä¸­ç™¼ç”ŸéŒ¯èª¤
-    echo   3. ç¼ºå°‘å¿…è¦æª”æ¡ˆ (config.ini, handle64.exe ç­‰)
+    echo ¥i¯àªº­ì¦]:
+    echo   1. ¸}¥»°õ¦æ¹Lµ{¤¤µo¥Í¿ù»~
+    echo   2. ¯Ê¤Ö¥²­nÀÉ®× config.ini ©Î handle64.exe
+    echo   3. ³]©wÀÉ®æ¦¡¿ù»~
     echo.
-    echo å»ºè­°: è«‹ä½¿ç”¨ D2R_Launcher_Debug.bat æŸ¥çœ‹è©³ç´°éŒ¯èª¤è¨Šæ¯
+    echo «ØÄ³: ½Ğ¨Ï¥Î D2R_Launcher_Debug.bat ¬d¬İ¸Ô²Ó¿ù»~°T®§
     echo.
     pause
 )
