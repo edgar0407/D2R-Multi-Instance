@@ -1,6 +1,5 @@
 # Claude Code settings
 .claude/
-CLAUDE.md
 
 # Configuration files (contains sensitive account info)
 config.ini
