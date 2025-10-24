@@ -1,6 +1,11 @@
-# D2R 多開工具 (v b0.9.1)
+# D2R 多開工具 (v b0.9.2)
+
+> **使用者文件**：快速了解如何使用本工具
+> 技術細節請參閱 [CLAUDE.md](./CLAUDE.md) | 版本歷程請參閱 [CHANGELOG.md](./CHANGELOG.md)
 
 使用 handle.exe 繞過 D2R 的多開檢查機制，實現同時運行多個遊戲實例並自動登入。
+
+---
 
 ## 快速開始
 
@@ -136,7 +141,8 @@ D2R 使用名為 "Check For Other Instances" 的 handle 來檢測其他實例。
 
 ### 安全性
 - ⚠️ 帳號密碼以明文儲存在 `config.ini` 中，請妥善保管此檔案
-- 日誌不記錄敏感資訊（不記錄帳號密碼）
+- 日誌不記錄密碼，並自動遮罩 email 帳號（v0.9.2+）
+  - 範例：`test@example.com` → `t***@example.com`
 - 建議不要將 `config.ini` 上傳至公開的版本控制系統
 - 僅供個人學習測試，請遵守遊戲服務條款
 

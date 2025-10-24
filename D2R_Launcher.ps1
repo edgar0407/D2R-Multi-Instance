@@ -1,7 +1,7 @@
 ﻿# ==========================================
 # D2R 多開啟動器
-# 版本: b0.9.1
-# 更新日期: 2025-10-22
+# 版本: b0.9.2
+# 更新日期: 2025-10-24
 # ==========================================
 
 # 檢查啟動參數（必須在第一行）
@@ -10,7 +10,7 @@ param(
 )
 
 # 版本資訊
-$script:Version = "b0.9.1"
+$script:Version = "b0.9.2"
 
 # 設定全域除錯模式
 $script:DebugMode = $Debug
@@ -525,6 +525,31 @@ Write-Host ""
 Start-Sleep -Seconds 1
 
 # ==========================================
+# 函數: Email 遮罩
+# ==========================================
+function Mask-Email {
+    param([string]$Text)
+
+    # 使用正則表達式找出所有 email 並進行遮罩
+    # 格式：example@domain.com → e***@domain.com
+    $MaskedText = $Text -replace '([a-zA-Z0-9._%+-]+)@([a-zA-Z0-9.-]+\.[a-zA-Z]{2,})', {
+        param($Match)
+        $LocalPart = $Match.Groups[1].Value
+        $Domain = $Match.Groups[2].Value
+
+        # 保留第一個字符，其餘用 *** 取代
+        if ($LocalPart.Length -gt 1) {
+            $FirstChar = $LocalPart.Substring(0, 1)
+            return "$FirstChar***@$Domain"
+        } else {
+            return "$LocalPart***@$Domain"
+        }
+    }
+
+    return $MaskedText
+}
+
+# ==========================================
 # 函數: 寫入日誌
 # ==========================================
 function Write-Log {
@@ -532,7 +557,10 @@ function Write-Log {
 
     $Timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
     $LogFile = Join-Path $LogDir "D2R_Launch_$(Get-Date -Format 'yyyyMMdd').log"
-    $LogMessage = "[$Timestamp] [$Level] $Message"
+
+    # 對訊息中的 email 進行遮罩處理
+    $MaskedMessage = Mask-Email -Text $Message
+    $LogMessage = "[$Timestamp] [$Level] $MaskedMessage"
 
     # 使用 mutex 避免多進程同時寫入日誌檔案發生錯誤
     try {
@@ -567,45 +595,130 @@ function Close-D2RHandles {
         # 儲存輸出到檔案
         $HandleOutput | Out-File -FilePath $TempFilePath -Encoding UTF8
 
+        # 記錄原始輸出到日誌（方便使用者回報問題）
+        Write-Log "handle.exe 原始輸出 (共 $($HandleOutput.Count) 行):" "INFO"
+        $HandleOutput | ForEach-Object { Write-Log "  $_" "INFO" }
+
         # 除錯模式顯示 handle.exe 原始輸出
         if ($script:DebugMode) {
-            Write-Host "  [除錯] handle.exe 搜尋結果:" -ForegroundColor DarkGray
+            Write-Host "  [除錯] handle.exe 搜尋結果 (共 $($HandleOutput.Count) 行):" -ForegroundColor DarkGray
             $HandleOutput | ForEach-Object { Write-Host "    $_" -ForegroundColor DarkGray }
         }
 
-        # 使用 tokens=3,6 方法來關閉所有 handles
+        # 使用多種解析方法來關閉所有 handles
         $CloseCount = 0
+        $ParsedCount = 0
+        $SkippedCount = 0
         $Lines = Get-Content $TempFilePath
 
+        Write-Log "開始解析 handle.exe 輸出 (共 $($Lines.Count) 行)" "INFO"
+
         foreach ($Line in $Lines) {
-            # 以空白分隔取得第 3 和第 6 個 token (ProcessID 和 Handle ID)
+            # 跳過空白行
+            if ([string]::IsNullOrWhiteSpace($Line)) {
+                continue
+            }
+
+            # 只處理包含 D2R.exe 的行（跳過版權資訊等）
+            if ($Line -notmatch 'D2R\.exe') {
+                continue
+            }
+
+            # 方法 1: 使用改進的正則表達式解析（更精確）
+            # 格式: D2R.exe            pid: 19880  type: Event          79C: \Sessions\...
+            # 確保從行首開始匹配，並明確指定各欄位位置
+            if ($Line -match '^D2R\.exe\s+pid:\s*(\d+)\s+type:\s+\w+\s+([0-9A-Fa-f]+):') {
+                $ProcessID = $matches[1]
+                $HandleID = $matches[2]
+                $ParsedCount++
+
+                Write-Log "方法1成功解析 - PID: $ProcessID, HID: $HandleID, 原文: $Line" "INFO"
+                Write-Host "  [偵測] 找到 handle: PID=$ProcessID, HID=$HandleID" -ForegroundColor Cyan
+
+                # 關閉 handle
+                $CloseResult = & $HandleExePath -accepteula -p $ProcessID -c $HandleID -y 2>&1
+
+                if ($LASTEXITCODE -eq 0) {
+                    Write-Host "  [成功] 已關閉 handle: $HandleID" -ForegroundColor Green
+                    Write-Log "成功關閉 handle: $HandleID (PID: $ProcessID)" "SUCCESS"
+                    $CloseCount++
+                } else {
+                    Write-Host "  [錯誤] 無法關閉 handle: $HandleID (錯誤: $CloseResult)" -ForegroundColor Red
+                    Write-Log "無法關閉 handle: $HandleID - $CloseResult" "ERROR"
+                }
+                continue
+            }
+
+            # 方法 2: 使用 tokens 解析（備用方法，更穩健的版本）
             $Tokens = $Line -split '\s+' | Where-Object { $_ -ne '' }
 
-            if ($Tokens.Count -ge 6) {
-                $ProcessID = $Tokens[2]        # Token 3 (0-indexed = 2)
-                $HandleIDRaw = $Tokens[5]      # Token 6 (0-indexed = 5)
+            # 記錄所有 tokens 供診斷
+            Write-Log "方法2解析 - Tokens數: $($Tokens.Count), Tokens: [$($Tokens -join '] [')]" "INFO"
+
+            # 檢查必要的 tokens 是否存在
+            # Token[0] = D2R.exe
+            # Token[1] = pid:
+            # Token[2] = PID數字
+            # Token[3] = type:
+            # Token[4] = Event/Mutex等
+            # Token[5] = HandleID:
+            if ($Tokens.Count -ge 6 -and $Tokens[0] -eq 'D2R.exe' -and $Tokens[1] -eq 'pid:' -and $Tokens[3] -eq 'type:') {
+                $ProcessID = $Tokens[2]
+                $HandleIDRaw = $Tokens[5]
                 $HandleID = $HandleIDRaw -replace ':',''  # 移除冒號
+
+                Write-Log "方法2嘗試解析 - PID: $ProcessID, HID原始: $HandleIDRaw, HID: $HandleID" "INFO"
 
                 # 確認 ProcessID 是數字、HandleID 是十六進制
                 if ($ProcessID -match '^\d+$' -and $HandleID -match '^[0-9A-Fa-f]+$') {
-                    Write-Log "發現 handle - 進程 ID: $ProcessID, Handle ID: $HandleID"
+                    $ParsedCount++
+                    Write-Log "方法2成功解析 - PID: $ProcessID, HID: $HandleID" "INFO"
+                    Write-Host "  [偵測] 找到 handle: PID=$ProcessID, HID=$HandleID" -ForegroundColor Cyan
 
                     # 關閉 handle
                     $CloseResult = & $HandleExePath -accepteula -p $ProcessID -c $HandleID -y 2>&1
 
                     if ($LASTEXITCODE -eq 0) {
-                        Write-Log "成功關閉 handle: $HandleID" "SUCCESS"
+                        Write-Host "  [成功] 已關閉 handle: $HandleID" -ForegroundColor Green
+                        Write-Log "成功關閉 handle: $HandleID (PID: $ProcessID)" "SUCCESS"
                         $CloseCount++
                     } else {
+                        Write-Host "  [錯誤] 無法關閉 handle: $HandleID (錯誤: $CloseResult)" -ForegroundColor Red
                         Write-Log "無法關閉 handle: $HandleID - $CloseResult" "ERROR"
                     }
+                } else {
+                    # 格式不符，記錄詳細資訊
+                    $PidMatch = if ($ProcessID -match '^\d+$') { "✓" } else { "✗ ($ProcessID)" }
+                    $HidMatch = if ($HandleID -match '^[0-9A-Fa-f]+$') { "✓" } else { "✗ ($HandleID)" }
+                    Write-Log "解析失敗 - PID格式: $PidMatch, HID格式: $HidMatch, 原文: $Line" "WARNING"
+                    $SkippedCount++
                 }
+            } else {
+                # 結構不符，記錄詳細資訊
+                Write-Log "行結構不符 - Tokens數: $($Tokens.Count), Token[0]: $($Tokens[0]), Token[1]: $($Tokens[1]), Token[3]: $($Tokens[3]), 原文: $Line" "WARNING"
+                Write-Host "  [警告] handle 輸出格式異常，無法解析" -ForegroundColor Yellow
+                if ($script:DebugMode) {
+                    Write-Host "    Tokens: $($Tokens -join ' | ')" -ForegroundColor DarkGray
+                }
+                $SkippedCount++
             }
         }
+
+        # 顯示解析統計
+        Write-Log "解析統計 - 總行數: $($Lines.Count), 成功解析: $ParsedCount, 成功關閉: $CloseCount, 跳過: $SkippedCount" "INFO"
 
         if ($CloseCount -eq 0) {
             Write-Host "  [資訊] 沒有需要關閉的 handles" -ForegroundColor Gray
             Write-Log "沒有發現需要關閉的 handles"
+
+            # 顯示診斷建議
+            if ($ParsedCount -eq 0 -and $Lines.Count -gt 0) {
+                Write-Host "  [診斷] handle.exe 有輸出但無法解析，請確認:" -ForegroundColor Yellow
+                Write-Host "    1. 是否以管理員身分執行" -ForegroundColor Yellow
+                Write-Host "    2. handle.exe 版本是否正確" -ForegroundColor Yellow
+                Write-Host "    3. 防毒軟體是否阻擋 handle.exe" -ForegroundColor Yellow
+                Write-Host "    4. 請查看日誌檔案中的原始輸出" -ForegroundColor Yellow
+            }
 
             # 除錯模式顯示可能的原因
             if ($script:DebugMode) {
@@ -614,6 +727,7 @@ function Close-D2RHandles {
                 Write-Host "    2. 遊戲啟動失敗或已崩潰" -ForegroundColor DarkGray
                 Write-Host "    3. Handle 名稱已改變" -ForegroundColor DarkGray
                 Write-Host "    4. 權限不足,無法查看進程 handle" -ForegroundColor DarkGray
+                Write-Host "    5. handle.exe 輸出格式與預期不符" -ForegroundColor DarkGray
             }
         } else {
             Write-Host "  [資訊] 成功關閉 $CloseCount 個 handles" -ForegroundColor Green
