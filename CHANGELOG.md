@@ -5,6 +5,16 @@
 
 ---
 
+## [b0.9.3] - 2025-10-25
+
+修正 Windows 10 環境下權限不足導致無法關閉 handle 的問題。
+
+Fix - UAC 提權機制缺陷（即使「以管理員身分執行」也可能只有 Filtered Admin Token，權限不足）
+Fix - 強制使用 Start-Process -Verb RunAs 重新啟動，確保獲得 Full Admin Token
+Add - AlreadyElevated 內部參數，避免無限循環提權
+
+---
+
 ## [b0.9.2] - 2025-10-24
 
 修正 handle 解析錯誤，解決部分使用者環境下無法正確關閉 handle 的問題。

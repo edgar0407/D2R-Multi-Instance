@@ -1,16 +1,17 @@
 ﻿# ==========================================
 # D2R 多開啟動器
-# 版本: b0.9.2
-# 更新日期: 2025-10-24
+# 版本: b0.9.3
+# 更新日期: 2025-10-25
 # ==========================================
 
 # 檢查啟動參數（必須在第一行）
 param(
-    [switch]$Debug  # 使用 -debug 參數啟動可顯示除錯資訊
+    [switch]$Debug,  # 使用 -debug 參數啟動可顯示除錯資訊
+    [switch]$AlreadyElevated  # 內部參數：標記已經過提權，避免無限循環
 )
 
 # 版本資訊
-$script:Version = "b0.9.2"
+$script:Version = "b0.9.3"
 
 # 設定全域除錯模式
 $script:DebugMode = $Debug
@@ -44,19 +45,27 @@ $OutputEncoding = [System.Text.Encoding]::UTF8
 # ==========================================
 # 自動提權檢查
 # ==========================================
+# 修正: 強制使用 Start-Process -Verb RunAs 重新啟動，確保獲得完整管理員權限
+# 原因: 即使「右鍵以管理員身分執行」，也可能只有 Filtered Admin Token，無法關閉 handle
+# 解決方案: 所有執行都必須通過 Start-Process -Verb RunAs 提權，才能獲得 Full Admin Token
 $CurrentIdentity = [Security.Principal.WindowsIdentity]::GetCurrent()
 $Principal = New-Object Security.Principal.WindowsPrincipal($CurrentIdentity)
 $IsAdmin = $Principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 
-if (-not $IsAdmin) {
-    Write-Host "檢測到需要管理員權限，正在重新啟動..." -ForegroundColor Yellow
+# 如果沒有 -AlreadyElevated 參數，就強制重新提權（即使已經是管理員）
+if (-not $AlreadyElevated) {
+    if ($IsAdmin) {
+        Write-Host "檢測到已有管理員權限，但需要重新提權以獲得完整權限..." -ForegroundColor Yellow
+    } else {
+        Write-Host "檢測到需要管理員權限，正在重新啟動..." -ForegroundColor Yellow
+    }
     Write-Host ""
     Write-Host "即將彈出 UAC 權限提示，請點擊「是」以繼續" -ForegroundColor Cyan
     Write-Host ""
 
     # 重新以管理員身分啟動，保留 debug 參數
     $ScriptPath = $MyInvocation.MyCommand.Path
-    $Arguments = "-ExecutionPolicy Bypass -File `"$ScriptPath`""
+    $Arguments = "-ExecutionPolicy Bypass -File `"$ScriptPath`" -AlreadyElevated"
     if ($Debug) {
         $Arguments += " -Debug"
     }
