@@ -4,6 +4,9 @@
 # Configuration files (contains sensitive account info)
 config.ini
 
+# Personal reference files
+D2R_Launch_Parameters.md
+
 # Handle tool
 Handle/
 

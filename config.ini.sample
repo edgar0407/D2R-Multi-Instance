@@ -27,13 +27,15 @@ HandleExePath=Handle\handle64.exe
 # Handle.exe 輸出的臨時檔案路徑（選填，通常不需修改）
 TempFilePath=Handle\handles_temp.txt
 
-# D2R 遊戲執行檔路徑（必填）
-D2RGamePath=D:\Diablo II Resurrected\D2R.exe
+# D2R 遊戲執行檔路徑（已移至 [General] 區塊）
+# 為了向後相容，此設定仍然有效，但建議使用 [General] 區塊的 DefaultD2RGamePath
+# D2RGamePath=D:\Diablo II Resurrected\D2R.exe
 
 # ==========================================
 # 第二區：一般參數設定
 # ==========================================
 # 說明：
+# - DefaultD2RGamePath: 預設遊戲執行檔路徑
 # - DefaultServer: 預設伺服器，可選 us/eu/kr
 # - DefaultLaunchArgs: 預設啟動參數
 #
@@ -42,12 +44,19 @@ D2RGamePath=D:\Diablo II Resurrected\D2R.exe
 #   -txt           啟用 txt 檔讀取模式
 #   -w             視窗化模式（非全螢幕）
 #   -ns            靜音（關閉遊戲音效）
+#   -lq            低畫質/大字體模式（可提升效能）
+#   -resetofflinemaps  每次啟動重置單人地圖（刷圖用）
 #
 # 範例：
 #   DefaultLaunchArgs=-mod LiYuiMod -txt -w -ns
+#   DefaultLaunchArgs=-w -ns -lq  （低配電腦優化）
 # ==========================================
 
 [General]
+# 預設 D2R 遊戲執行檔路徑（必填）
+# 當帳號未指定遊戲路徑時使用
+DefaultD2RGamePath=D:\Diablo II Resurrected\D2R.exe
+
 # 預設伺服器 (us/eu/kr) - 當帳號未指定伺服器時使用
 DefaultServer=kr
 
@@ -64,18 +73,26 @@ WindowInitDelay=3
 # - 每個帳號使用 [Account1], [Account2], [Account3]... 格式
 # - 必填欄位：Username（帳號）、Password（密碼）
 # - 選填欄位：
+#   * D2RGamePath（遊戲路徑，留空則使用 DefaultD2RGamePath）
 #   * Server（伺服器，留空則使用 DefaultServer）
 #   * DisplayName（顯示名稱，留空則使用帳號）
 #   * LaunchArgs（啟動參數，留空則使用 DefaultLaunchArgs）
 # - 資料不完整的帳號會被跳過，並在啟動時顯示警告
 #
-# 範例：完整設定
+# 範例 1：最簡單（僅帳密，其他使用預設值）
 #   [Account1]
 #   Username=your_email@example.com
 #   Password=your_password
-#   DisplayName=主帳號
-#   Server=kr
-#   LaunchArgs=-mod YourMod -txt -w -ns
+#   DisplayName=帳號一
+#
+# 範例 2：全客制參數（完整設定）
+#   [Account2]
+#   Username=custom@example.com
+#   Password=custom_password
+#   DisplayName=客制帳號
+#   D2RGamePath=D:\CustomPath\D2R.exe
+#   Server=us
+#   LaunchArgs=-mod CustomMod -txt -w -ns
 # ==========================================
 
 [Account1]

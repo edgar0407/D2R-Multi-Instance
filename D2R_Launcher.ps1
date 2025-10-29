@@ -1,7 +1,7 @@
 ﻿# ==========================================
 # D2R 多開啟動器
-# 版本: b0.9.3
-# 更新日期: 2025-10-25
+# 版本: b0.9.4
+# 更新日期: 2025-10-29
 # ==========================================
 
 # 檢查啟動參數（必須在第一行）
@@ -11,7 +11,7 @@ param(
 )
 
 # 版本資訊
-$script:Version = "b0.9.3"
+$script:Version = "b0.9.4"
 
 # 設定全域除錯模式
 $script:DebugMode = $Debug
@@ -161,7 +161,6 @@ $Config = Read-IniFile -FilePath $ConfigPath
 # ==========================================
 $HandleExePath = $Config["Paths"]["HandleExePath"]
 $TempFilePath = $Config["Paths"]["TempFilePath"]
-$D2RGamePath = $Config["Paths"]["D2RGamePath"]
 
 # 驗證必要的路徑設定
 if ([string]::IsNullOrWhiteSpace($HandleExePath)) {
@@ -170,17 +169,10 @@ if ([string]::IsNullOrWhiteSpace($HandleExePath)) {
     Read-Host "按 Enter 鍵退出"
     exit 1
 }
-if ([string]::IsNullOrWhiteSpace($D2RGamePath)) {
-    Write-Host "錯誤: config.ini 中未設定 D2RGamePath" -ForegroundColor Red
-    Write-Host ""
-    Read-Host "按 Enter 鍵退出"
-    exit 1
-}
 
 # 去除路徑前後的空白和引號
 $HandleExePath = $HandleExePath.Trim().Trim('"').Trim("'")
 $TempFilePath = if ($TempFilePath) { $TempFilePath.Trim().Trim('"').Trim("'") } else { "Handle\handles_temp.txt" }
-$D2RGamePath = $D2RGamePath.Trim().Trim('"').Trim("'")
 
 # 處理相對路徑
 if (-not [System.IO.Path]::IsPathRooted($HandleExePath)) {
@@ -205,6 +197,25 @@ $LogDir = Join-Path $ScriptDir "logs"
 $DefaultServer = $Config["General"]["DefaultServer"]
 $DefaultLaunchArgs = $Config["General"]["DefaultLaunchArgs"]
 $WindowInitDelay = $Config["General"]["WindowInitDelay"]
+$DefaultD2RGamePath = $Config["General"]["DefaultD2RGamePath"]
+
+# 向後相容：如果 General.DefaultD2RGamePath 沒設定，使用 Paths.D2RGamePath
+if ([string]::IsNullOrWhiteSpace($DefaultD2RGamePath)) {
+    $DefaultD2RGamePath = $Config["Paths"]["D2RGamePath"]
+}
+
+# 驗證 D2RGamePath 是否設定
+if ([string]::IsNullOrWhiteSpace($DefaultD2RGamePath)) {
+    Write-Host "錯誤: config.ini 中未設定 D2RGamePath" -ForegroundColor Red
+    Write-Host "      請在 [General] 區塊設定 DefaultD2RGamePath" -ForegroundColor Red
+    Write-Host "      或在 [Paths] 區塊設定 D2RGamePath (向後相容)" -ForegroundColor Red
+    Write-Host ""
+    Read-Host "按 Enter 鍵退出"
+    exit 1
+}
+
+# 去除路徑前後的空白和引號
+$DefaultD2RGamePath = $DefaultD2RGamePath.Trim().Trim('"').Trim("'")
 
 # 設定預設值
 if ([string]::IsNullOrWhiteSpace($WindowInitDelay) -or -not ($WindowInitDelay -match '^\d+$')) {
@@ -231,6 +242,7 @@ foreach ($Section in $AccountSections) {
     $DisplayName = $Config[$Section]["DisplayName"]
     $Server = $Config[$Section]["Server"]
     $LaunchArgs = $Config[$Section]["LaunchArgs"]
+    $D2RGamePath = $Config[$Section]["D2RGamePath"]
 
     # 驗證必要欄位：Username, Password (Server 改為選填)
     $MissingFields = @()
@@ -264,6 +276,14 @@ foreach ($Section in $AccountSections) {
         $LaunchArgs = $DefaultLaunchArgs
     }
 
+    # D2RGamePath 留空則使用 DefaultD2RGamePath
+    if ([string]::IsNullOrWhiteSpace($D2RGamePath)) {
+        $D2RGamePath = $DefaultD2RGamePath
+    } else {
+        # 去除路徑前後的空白和引號
+        $D2RGamePath = $D2RGamePath.Trim().Trim('"').Trim("'")
+    }
+
     # 建立帳號物件
     $Account = @{
         Username = $Username.Trim()
@@ -271,6 +291,7 @@ foreach ($Section in $AccountSections) {
         DisplayName = $DisplayName.Trim()
         Server = if ($Server) { $Server.Trim() } else { "" }
         LaunchArgs = if ($LaunchArgs) { $LaunchArgs.Trim() } else { "" }
+        D2RGamePath = $D2RGamePath
         IsValid = $true
     }
     $Accounts += $Account
@@ -503,12 +524,8 @@ if (-not (Test-Path $HandleExePath)) {
     exit 1
 }
 
-if (-not (Test-Path $D2RGamePath)) {
-    Write-Host "錯誤: 找不到 D2R 遊戲，路徑: $D2RGamePath" -ForegroundColor Red
-    Write-Host ""
-    Read-Host "按 Enter 鍵退出"
-    exit 1
-}
+# 注意：D2RGamePath 檢查已移至啟動遊戲時個別驗證
+# 因為每個帳號可能使用不同的遊戲路徑
 
 # 建立日誌目錄
 if (-not (Test-Path $LogDir)) {
@@ -762,6 +779,7 @@ function Start-D2R {
         [string]$DisplayName,
         [string]$Server = "",
         [string]$LaunchArgs = "",
+        [string]$D2RGamePath = "",
         [int]$AccountNumber = 0
     )
 
@@ -769,6 +787,19 @@ function Start-D2R {
     Write-Host "================================================" -ForegroundColor Cyan
     Write-Host "  正在啟動: $DisplayName" -ForegroundColor Yellow
     Write-Host "================================================" -ForegroundColor Cyan
+
+    # 驗證遊戲路徑
+    if ([string]::IsNullOrWhiteSpace($D2RGamePath)) {
+        Write-Host "  [錯誤] 未設定 D2R 遊戲路徑" -ForegroundColor Red
+        Write-Log "未設定 D2R 遊戲路徑 - $DisplayName" "ERROR"
+        return
+    }
+
+    if (-not (Test-Path $D2RGamePath)) {
+        Write-Host "  [錯誤] 找不到 D2R 遊戲，路徑: $D2RGamePath" -ForegroundColor Red
+        Write-Log "找不到 D2R 遊戲 - 路徑: $D2RGamePath" "ERROR"
+        return
+    }
 
     try {
         # 先檢查並關閉 handle (允許新實例啟動)
@@ -953,7 +984,7 @@ do {
             Write-Host "開始啟動所有有效帳號..." -ForegroundColor Green
             for ($i = 0; $i -lt $Accounts.Count; $i++) {
                 $Account = $Accounts[$i]
-                Start-D2R -Username $Account.Username -Password $Account.Password -DisplayName $Account.DisplayName -Server $Account.Server -LaunchArgs $Account.LaunchArgs -AccountNumber ($i + 1)
+                Start-D2R -Username $Account.Username -Password $Account.Password -DisplayName $Account.DisplayName -Server $Account.Server -LaunchArgs $Account.LaunchArgs -D2RGamePath $Account.D2RGamePath -AccountNumber ($i + 1)
             }
             Write-Host ""
             Write-Host "所有有效帳號已啟動完畢！" -ForegroundColor Green
@@ -985,7 +1016,7 @@ do {
                         $AccountIndex = $AccNum - 1
                         if ($AccountIndex -ge 0 -and $AccountIndex -lt $Accounts.Count) {
                             $Account = $Accounts[$AccountIndex]
-                            Start-D2R -Username $Account.Username -Password $Account.Password -DisplayName $Account.DisplayName -Server $Account.Server -LaunchArgs $Account.LaunchArgs -AccountNumber $AccNum
+                            Start-D2R -Username $Account.Username -Password $Account.Password -DisplayName $Account.DisplayName -Server $Account.Server -LaunchArgs $Account.LaunchArgs -D2RGamePath $Account.D2RGamePath -AccountNumber $AccNum
                         }
                     }
                     Write-Host ""
@@ -1001,7 +1032,7 @@ do {
             elseif ($Choice -match '^\d+$' -and [int]$Choice -ge 1 -and [int]$Choice -le $Accounts.Count) {
                 $AccountIndex = [int]$Choice - 1
                 $SelectedAccount = $Accounts[$AccountIndex]
-                Start-D2R -Username $SelectedAccount.Username -Password $SelectedAccount.Password -DisplayName $SelectedAccount.DisplayName -Server $SelectedAccount.Server -LaunchArgs $SelectedAccount.LaunchArgs -AccountNumber ([int]$Choice)
+                Start-D2R -Username $SelectedAccount.Username -Password $SelectedAccount.Password -DisplayName $SelectedAccount.DisplayName -Server $SelectedAccount.Server -LaunchArgs $SelectedAccount.LaunchArgs -D2RGamePath $SelectedAccount.D2RGamePath -AccountNumber ([int]$Choice)
                 Write-Host ""
                 Read-Host "按 Enter 返回選單"
             }

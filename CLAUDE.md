@@ -8,8 +8,8 @@
 ## 📋 專案概述
 
 **專案名稱**: D2R Multi-Instance Launcher (D2R 多開啟動器)
-**當前版本**: b0.9.3
-**最後更新**: 2025-10-25
+**當前版本**: b0.9.4
+**最後更新**: 2025-10-29
 **開發語言**: PowerShell 5.0+
 **目標平台**: Windows (繁體中文環境)
 
@@ -300,7 +300,23 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 
 ## 🚀 版本歷史重點
 
-### b0.9.3 (2025-10-25) - 當前版本
+### b0.9.4 (2025-10-29) - 當前版本
+
+**主要新增**:
+- ✨ 每個帳號可設定獨立的 D2RGamePath（支援不同遊戲版本多開）
+- ✨ DefaultD2RGamePath 設定（在 [General] 區塊設定預設遊戲路徑）
+
+**主要改進**:
+- 🔄 將遊戲路徑驗證從初始化階段移至啟動時個別檢查
+- 🔄 向後相容：若未設定 DefaultD2RGamePath，自動讀取 Paths.D2RGamePath
+- 📝 config.ini.sample 簡化範例（最簡單與全客制參數兩種）
+
+**技術細節**:
+- 每個 Account 物件新增 D2RGamePath 欄位
+- Start-D2R 函數新增 D2RGamePath 參數驗證
+- 帳號載入時支援 D2RGamePath 選填（留空使用 DefaultD2RGamePath）
+
+### b0.9.3 (2025-10-25)
 
 **主要修復**:
 - 🐛 修正 UAC 提權機制缺陷（即使「以管理員身分執行」也可能只有 Filtered Admin Token，權限不足以關閉 handle）
@@ -422,6 +438,6 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 
 ---
 
-**文件最後更新**: 2025-10-25
-**文件版本**: 1.2
-**對應專案版本**: b0.9.3
+**文件最後更新**: 2025-10-29
+**文件版本**: 1.3
+**對應專案版本**: b0.9.4

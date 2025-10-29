@@ -1,4 +1,4 @@
-# D2R 多開工具 (v b0.9.3)
+# D2R 多開工具 (v b0.9.4)
 
 > **使用者文件**：快速了解如何使用本工具
 > 技術細節請參閱 [CLAUDE.md](./CLAUDE.md) | 版本歷程請參閱 [CHANGELOG.md](./CHANGELOG.md)
@@ -24,10 +24,10 @@
 HandleExePath=Handle\handle64.exe
 # Handle.exe 輸出的臨時檔案路徑
 TempFilePath=Handle\handles_temp.txt
-# D2R 遊戲執行檔路徑
-D2RGamePath=D:\Diablo II Resurrected\D2R.exe
 
 [General]
+# 預設 D2R 遊戲執行檔路徑 - 當帳號未指定時使用
+DefaultD2RGamePath=D:\Diablo II Resurrected\D2R.exe
 # 預設伺服器 (us, eu, kr) - 當帳號未指定時使用
 DefaultServer=kr
 # 預設啟動參數 - 當帳號未指定時使用
@@ -39,6 +39,7 @@ WindowInitDelay=3
 Username=your_email@example.com
 Password=your_password
 DisplayName=帳號暱稱
+D2RGamePath=  # 可留空使用 DefaultD2RGamePath（例如用於 PTR 測試服）
 Server=kr  # 可留空使用 DefaultServer
 LaunchArgs=-mod YourMod -txt -w  # 可留空使用 DefaultLaunchArgs
 
@@ -80,7 +81,7 @@ Accounts=1,2,3  # 要啟動的帳號編號，用逗號分隔
 - ✅ **互動式選單**：選擇單一帳號、群組或啟動全部
 - ✅ **群組功能**：自訂帳號組合，一鍵啟動特定帳號群組
 - ✅ **伺服器選擇**：支援 US/EU/KR 伺服器，可設定預設值
-- ✅ **彈性設定**：Server 和 LaunchArgs 可選填，自動使用預設值
+- ✅ **彈性設定**：D2RGamePath、Server 和 LaunchArgs 可選填，自動使用預設值
 - ✅ **參數化等待時間**：可自訂視窗初始化等待時間
 - ✅ **優化啟動流程**：先關閉 handle 再啟動，提升效率
 - ✅ **MOD 支援**：可自訂 MOD 和啟動參數
