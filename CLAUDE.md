@@ -8,8 +8,8 @@
 ## 📋 專案概述
 
 **專案名稱**: D2R Multi-Instance Launcher (D2R 多開啟動器)
-**當前版本**: b0.9.4
-**最後更新**: 2025-10-29
+**當前版本**: v1.0.0
+**最後更新**: 2025-12-21
 **開發語言**: PowerShell 5.0+
 **目標平台**: Windows (繁體中文環境)
 
@@ -98,7 +98,7 @@ D2R-Multi-Instance/
 
 #### 2. **D2R_Launcher.bat** (BAT 啟動器)
 
-**編碼**: ANSI (Big5 / Windows-950)
+**編碼**: ASCII (純英文，避免編碼問題)
 **用途**:
 - 自動檢查並解除從 GitHub 下載的檔案封鎖 (Zone.Identifier)
 - 啟動 PowerShell 腳本
@@ -128,6 +128,8 @@ D2RGamePath=D:\Diablo II Resurrected\D2R.exe
 DefaultServer=kr                    # 預設伺服器 (us/eu/kr)
 DefaultLaunchArgs=-mod YourMod -txt -w  # 預設啟動參數
 WindowInitDelay=3                   # 視窗初始化等待時間（秒）
+MenuReturnDelay=5                   # 操作完成後自動返回選單的倒數秒數
+LogRetentionDays=30                 # 日誌保留天數（超過自動刪除）
 
 [Account1]
 Username=email@example.com          # 必填
@@ -261,7 +263,7 @@ function Mask-Email {
 |---------|---------|------|
 | `.ps1` | UTF-8 with BOM | PowerShell 需要 BOM 才能正確顯示中文 |
 | `.ini` | UTF-8 (無 BOM) | 設定檔通用格式 |
-| `.bat` | ANSI (Big5 / CP950) | Windows CMD 預設編碼，避免中文亂碼 |
+| `.bat` | ASCII (純英文) | 避免編碼問題，中文訊息由 PS1 處理 |
 | `.md` | UTF-8 | Markdown 標準編碼 |
 
 ### 安全性考量
@@ -300,7 +302,27 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 
 ## 🚀 版本歷史重點
 
-### b0.9.4 (2025-10-29) - 當前版本
+### v1.0.0 (2025-12-21) - 當前版本 🎉 正式版
+
+**主要新增**:
+- ✨ 程式啟動時記錄完整環境資訊（版本、權限、路徑、設定）
+- ✨ 程式結束時記錄結束狀態
+- ✨ 日誌記錄 PowerShell 版本與作業系統資訊
+- ✨ 操作完成後自動倒數返回選單（MenuReturnDelay 參數）
+- ✨ 倒數期間可按任意鍵立即返回
+- ✨ 自動清理過期日誌檔案（LogRetentionDays 參數，預設 30 天）
+
+**主要修復**:
+- 🐛 日誌檔案編碼問題（中文顯示亂碼）
+- 🐛 D2R_Launcher.bat 中文編碼問題
+- 🐛 D2R_Launcher.bat 版本號與主程式不同步
+
+**技術改進**:
+- 日誌系統使用 `[System.IO.File]::AppendAllText()` 搭配 UTF-8 編碼
+- BAT 檔案改用純英文避免編碼問題
+- 新增 `Wait-AndReturn` 函數處理倒數返回邏輯
+
+### b0.9.4 (2025-10-29)
 
 **主要新增**:
 - ✨ 每個帳號可設定獨立的 D2RGamePath（支援不同遊戲版本多開）
@@ -438,6 +460,6 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 
 ---
 
-**文件最後更新**: 2025-10-29
-**文件版本**: 1.3
-**對應專案版本**: b0.9.4
+**文件最後更新**: 2025-12-21
+**文件版本**: 1.4
+**對應專案版本**: v1.0.0

@@ -1,11 +1,21 @@
 @echo off
-chcp 65001 >nul
+:: ==========================================
+:: D2R Multi-Instance Launcher v1.0.0 - Debug Mode
+:: ==========================================
+
 echo ========================================
-echo   D2R 多開啟動器 - 除錯模式
+echo   D2R Launcher v1.0.0 - DEBUG MODE
 echo ========================================
 echo.
-echo 除錯模式會顯示額外的診斷資訊
-echo 包含帳號、密碼長度等敏感資訊
+echo Debug mode shows additional diagnostics
+echo including account and password length info
 echo.
 pause
 powershell.exe -ExecutionPolicy Bypass -File "%~dp0D2R_Launcher.ps1" -Debug
+
+if %ERRORLEVEL% NEQ 0 (
+    echo.
+    echo Script Error - Code: %ERRORLEVEL%
+    pause
+)
+

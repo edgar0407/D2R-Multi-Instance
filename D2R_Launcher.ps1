@@ -1,7 +1,7 @@
 ﻿# ==========================================
 # D2R 多開啟動器
-# 版本: b0.9.4
-# 更新日期: 2025-10-29
+# 版本: v1.0.0
+# 更新日期: 2025-12-21
 # ==========================================
 
 # 檢查啟動參數（必須在第一行）
@@ -11,7 +11,7 @@ param(
 )
 
 # 版本資訊
-$script:Version = "b0.9.4"
+$script:Version = "v1.0.0"
 
 # 設定全域除錯模式
 $script:DebugMode = $Debug
@@ -222,6 +222,22 @@ if ([string]::IsNullOrWhiteSpace($WindowInitDelay) -or -not ($WindowInitDelay -m
     $WindowInitDelay = 3  # 預設 3 秒
 } else {
     $WindowInitDelay = [int]$WindowInitDelay
+}
+
+# 讀取選單返回倒數時間（向後相容：找不到則預設 5 秒）
+$MenuReturnDelay = $Config["General"]["MenuReturnDelay"]
+if ([string]::IsNullOrWhiteSpace($MenuReturnDelay) -or -not ($MenuReturnDelay -match '^\d+$')) {
+    $MenuReturnDelay = 5  # 預設 5 秒
+} else {
+    $MenuReturnDelay = [int]$MenuReturnDelay
+}
+
+# 讀取日誌保留天數（向後相容：找不到則預設 30 天）
+$LogRetentionDays = $Config["General"]["LogRetentionDays"]
+if ([string]::IsNullOrWhiteSpace($LogRetentionDays) -or -not ($LogRetentionDays -match '^\d+$')) {
+    $LogRetentionDays = 30  # 預設 30 天
+} else {
+    $LogRetentionDays = [int]$LogRetentionDays
 }
 
 # ==========================================
@@ -533,6 +549,25 @@ if (-not (Test-Path $LogDir)) {
 }
 
 # ==========================================
+# 清理過期日誌檔案
+# ==========================================
+if ($LogRetentionDays -gt 0) {
+    try {
+        $CutoffDate = (Get-Date).AddDays(-$LogRetentionDays)
+        $OldLogs = Get-ChildItem -Path $LogDir -Filter "D2R_Launch_*.log" -ErrorAction SilentlyContinue | 
+            Where-Object { $_.LastWriteTime -lt $CutoffDate }
+        
+        if ($OldLogs.Count -gt 0) {
+            Write-Host "✓ 清理 $($OldLogs.Count) 個過期日誌檔案 (超過 $LogRetentionDays 天)" -ForegroundColor Gray
+            $OldLogs | Remove-Item -Force -ErrorAction SilentlyContinue
+        }
+    }
+    catch {
+        # 忽略清理錯誤，不影響主程式
+    }
+}
+
+# ==========================================
 # 初始化 handle.exe (接受 EULA)
 # ==========================================
 Write-Host "✓ 正在初始化 handle.exe..." -ForegroundColor Green
@@ -548,7 +583,6 @@ Write-Host "========================================" -ForegroundColor Cyan
 Write-Host "  初始化完成，準備啟動主選單" -ForegroundColor Green
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
-Start-Sleep -Seconds 1
 
 # ==========================================
 # 函數: Email 遮罩
@@ -592,13 +626,76 @@ function Write-Log {
     try {
         $Mutex = New-Object System.Threading.Mutex($false, "D2RLauncherLogMutex")
         [void]$Mutex.WaitOne()
-        Add-Content -Path $LogFile -Value $LogMessage -ErrorAction SilentlyContinue
+        # 使用 UTF8 編碼寫入（確保中文正確顯示）
+        [System.IO.File]::AppendAllText($LogFile, "$LogMessage`r`n", [System.Text.Encoding]::UTF8)
         $Mutex.ReleaseMutex()
         $Mutex.Dispose()
     }
     catch {
         # 忽略日誌寫入錯誤
     }
+}
+
+# ==========================================
+# 記錄啟動環境資訊到日誌
+# ==========================================
+Write-Log "========== 程式啟動 ==========" "INFO"
+Write-Log "版本: $($script:Version)" "INFO"
+Write-Log "PowerShell 版本: $($PSVersionTable.PSVersion)" "INFO"
+Write-Log "作業系統: $([System.Environment]::OSVersion.VersionString)" "INFO"
+Write-Log "管理員權限: 是" "INFO"
+Write-Log "除錯模式: $(if($script:DebugMode){'啟用'}else{'停用'})" "INFO"
+Write-Log "--- 路徑設定 ---" "INFO"
+Write-Log "HandleExePath: $HandleExePath (存在: $(Test-Path $HandleExePath))" "INFO"
+Write-Log "DefaultD2RGamePath: $DefaultD2RGamePath (存在: $(Test-Path $DefaultD2RGamePath))" "INFO"
+Write-Log "TempFilePath: $TempFilePath" "INFO"
+Write-Log "LogDir: $LogDir" "INFO"
+Write-Log "--- 一般設定 ---" "INFO"
+Write-Log "DefaultServer: $(if($DefaultServer){$DefaultServer}else{'未設定'})" "INFO"
+Write-Log "DefaultLaunchArgs: $(if($DefaultLaunchArgs){$DefaultLaunchArgs}else{'未設定'})" "INFO"
+Write-Log "WindowInitDelay: $WindowInitDelay 秒" "INFO"
+Write-Log "MenuReturnDelay: $MenuReturnDelay 秒" "INFO"
+Write-Log "LogRetentionDays: $LogRetentionDays 天" "INFO"
+Write-Log "--- 帳號與群組 ---" "INFO"
+Write-Log "已載入帳號數: $($Accounts.Count)" "INFO"
+Write-Log "已載入群組數: $($Groups.Count)" "INFO"
+if ($script:InvalidAccounts.Count -gt 0) {
+    Write-Log "無效帳號數: $($script:InvalidAccounts.Count) (編號: $($script:InvalidAccounts -join ', '))" "WARNING"
+}
+Write-Log "================================" "INFO"
+
+Start-Sleep -Seconds 1
+
+# ==========================================
+# 函數: 倒數返回選單
+# ==========================================
+function Wait-AndReturn {
+    param(
+        [string]$Message = "返回選單",
+        [int]$Seconds = $script:MenuReturnDelay
+    )
+
+    # 如果設為 0，則需手動按鍵
+    if ($Seconds -le 0) {
+        Read-Host "按 Enter $Message"
+        return
+    }
+
+    Write-Host ""
+    for ($i = $Seconds; $i -gt 0; $i--) {
+        Write-Host "`r$i 秒後自動$Message... (按任意鍵立即返回)" -NoNewline -ForegroundColor Gray
+        
+        # 檢查是否有按鍵輸入
+        if ([Console]::KeyAvailable) {
+            [Console]::ReadKey($true) | Out-Null
+            Write-Host "`r                                                  " -NoNewline
+            Write-Host ""
+            return
+        }
+        Start-Sleep -Seconds 1
+    }
+    Write-Host "`r                                                  " -NoNewline
+    Write-Host ""
 }
 
 # ==========================================
@@ -972,7 +1069,7 @@ do {
             Write-Host ""
             if ($Accounts.Count -eq 0) {
                 Write-Host "沒有可用的帳號！" -ForegroundColor Red
-                Read-Host "按 Enter 返回選單"
+                Wait-AndReturn
                 continue
             }
 
@@ -988,17 +1085,18 @@ do {
             }
             Write-Host ""
             Write-Host "所有有效帳號已啟動完畢！" -ForegroundColor Green
-            Read-Host "按 Enter 返回選單"
+            Wait-AndReturn
         }
         "C" {
             Write-Host ""
             Write-Host "執行 Handle 清理作業..." -ForegroundColor Magenta
             Close-D2RHandles
             Write-Host ""
-            Read-Host "按 Enter 返回選單"
+            Wait-AndReturn
         }
         "Q" {
-            Write-Log "結束程式"
+            Write-Log "使用者正常結束程式" "INFO"
+            Write-Log "========== 程式結束 ==========" "INFO"
             exit 0
         }
         default {
@@ -1021,7 +1119,7 @@ do {
                     }
                     Write-Host ""
                     Write-Host "群組 '$($SelectedGroup.DisplayName)' 已啟動完畢！" -ForegroundColor Green
-                    Read-Host "按 Enter 返回選單"
+                    Wait-AndReturn
                 } else {
                     Write-Host ""
                     Write-Host "無效的群組編號！" -ForegroundColor Red
@@ -1034,7 +1132,7 @@ do {
                 $SelectedAccount = $Accounts[$AccountIndex]
                 Start-D2R -Username $SelectedAccount.Username -Password $SelectedAccount.Password -DisplayName $SelectedAccount.DisplayName -Server $SelectedAccount.Server -LaunchArgs $SelectedAccount.LaunchArgs -D2RGamePath $SelectedAccount.D2RGamePath -AccountNumber ([int]$Choice)
                 Write-Host ""
-                Read-Host "按 Enter 返回選單"
+                Wait-AndReturn
             }
             # 無效選擇
             else {
