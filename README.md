@@ -1,4 +1,4 @@
-# D2R 多開工具 (v1.0.0)
+# D2R 多開工具 (v1.0.1)
 
 > **使用者文件**：快速了解如何使用本工具
 > 技術細節請參閱 [CLAUDE.md](./CLAUDE.md) | 版本歷程請參閱 [CHANGELOG.md](./CHANGELOG.md)

@@ -1,10 +1,10 @@
 @echo off
 :: ==========================================
-:: D2R Multi-Instance Launcher v1.0.0
+:: D2R Multi-Instance Launcher v1.0.1
 :: ==========================================
 
 echo ========================================
-echo   D2R Multi-Instance Launcher v1.0.0
+echo   D2R Multi-Instance Launcher v1.0.1
 echo ========================================
 echo.
 
@@ -35,4 +35,5 @@ if %ERRORLEVEL% NEQ 0 (
     echo.
     pause
 )
+
 
