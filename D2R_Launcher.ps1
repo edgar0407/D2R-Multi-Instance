@@ -447,8 +447,8 @@ function Get-D2RWindowHandles {
                 [WindowAPI]::GetWindowText($hWnd, $StringBuilder, $StringBuilder.Capacity) | Out-Null
                 $Title = $StringBuilder.ToString()
 
-                # 檢查是否為 D2R 視窗
-                if ($Title -match "Diablo.*Resurrected" -or $Title -eq "Diablo II: Resurrected") {
+                # 檢查是否為 D2R 視窗（包含原始標題和已設定的自訂標題）
+                if ($Title -match "Diablo.*Resurrected" -or $Title -eq "Diablo II: Resurrected" -or $Title -match "^D2R:") {
                     [void]$script:Handles.Add($hWnd)
                 }
             }
