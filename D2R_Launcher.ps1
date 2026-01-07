@@ -1,6 +1,6 @@
 ﻿# ==========================================
 # D2R 多開啟動器
-# 版本: v1.0.1
+# 版本: v1.1.0
 # 更新日期: 2025-12-21
 # ==========================================
 
@@ -11,7 +11,7 @@ param(
 )
 
 # 版本資訊
-$script:Version = "v1.0.1"
+$script:Version = "v1.1.0"
 
 # 設定全域除錯模式
 $script:DebugMode = $Debug
@@ -259,6 +259,8 @@ foreach ($Section in $AccountSections) {
     $Server = $Config[$Section]["Server"]
     $LaunchArgs = $Config[$Section]["LaunchArgs"]
     $D2RGamePath = $Config[$Section]["D2RGamePath"]
+    $WindowsUser = $Config[$Section]["WindowsUser"]
+    $WindowsPassword = $Config[$Section]["WindowsPassword"]
 
     # 驗證必要欄位：Username, Password (Server 改為選填)
     $MissingFields = @()
@@ -308,6 +310,8 @@ foreach ($Section in $AccountSections) {
         Server = if ($Server) { $Server.Trim() } else { "" }
         LaunchArgs = if ($LaunchArgs) { $LaunchArgs.Trim() } else { "" }
         D2RGamePath = $D2RGamePath
+        WindowsUser = if ($WindowsUser) { $WindowsUser.Trim() } else { "" }
+        WindowsPassword = if ($WindowsPassword) { $WindowsPassword.Trim() } else { "" }
         IsValid = $true
     }
     $Accounts += $Account
@@ -877,12 +881,15 @@ function Start-D2R {
         [string]$Server = "",
         [string]$LaunchArgs = "",
         [string]$D2RGamePath = "",
+        [string]$WindowsUser = "",
+        [string]$WindowsPassword = "",
         [int]$AccountNumber = 0
     )
 
     Write-Host ""
     Write-Host "================================================" -ForegroundColor Cyan
-    Write-Host "  正在啟動: $DisplayName" -ForegroundColor Yellow
+    $WinUserInfo = if ($WindowsUser) { " @$WindowsUser" } else { "" }
+    Write-Host "  正在啟動: $DisplayName$WinUserInfo" -ForegroundColor Yellow
     Write-Host "================================================" -ForegroundColor Cyan
 
     # 驗證遊戲路徑
@@ -952,12 +959,36 @@ function Start-D2R {
 
         # 啟動遊戲
         Write-Host "  [執行] 正在啟動遊戲..." -ForegroundColor White
-        $ProcessInfo = Start-Process -FilePath $D2RGamePath -ArgumentList $ArgsList -PassThru
+        
+        # 檢查是否使用不同的 Windows 用戶
+        if ($WindowsUser -and $WindowsPassword) {
+            Write-Host "  [Windows] 使用 Windows 用戶: $WindowsUser" -ForegroundColor Magenta
+            Write-Log "使用 Windows 用戶啟動: $WindowsUser" "INFO"
+            
+            # 建立 Credential
+            $SecurePassword = ConvertTo-SecureString $WindowsPassword -AsPlainText -Force
+            $Credential = New-Object System.Management.Automation.PSCredential($WindowsUser, $SecurePassword)
+            
+            # 將參數組合成字串（因為 -Credential 模式需要）
+            $ArgsString = $ArgsList -join ' '
+            
+            try {
+                $ProcessInfo = Start-Process -FilePath $D2RGamePath -ArgumentList $ArgsString -Credential $Credential -PassThru
+            }
+            catch {
+                Write-Host "  [錯誤] 無法以 $WindowsUser 身份啟動: $($_.Exception.Message)" -ForegroundColor Red
+                Write-Log "以 $WindowsUser 身份啟動失敗: $($_.Exception.Message)" "ERROR"
+                return
+            }
+        } else {
+            # 使用當前用戶啟動
+            $ProcessInfo = Start-Process -FilePath $D2RGamePath -ArgumentList $ArgsList -PassThru
+        }
 
         if ($ProcessInfo) {
             Write-Host "  [成功] 遊戲已啟動 (PID: $($ProcessInfo.Id))" -ForegroundColor Green
             Write-Log "D2R 進程已啟動 - PID: $($ProcessInfo.Id)" "SUCCESS"
-            Write-Log "D2R 已啟動 - $DisplayName" "SUCCESS"
+            Write-Log "D2R 已啟動 - $DisplayName$(if($WindowsUser){' @'+$WindowsUser}else{''})" "SUCCESS"
         } else {
             Write-Host "  [警告] 無法取得進程資訊" -ForegroundColor Yellow
             Write-Log "無法取得進程資訊" "WARNING"
@@ -1023,9 +1054,15 @@ function Show-Menu {
     # 顯示有效帳號
     for ($i = 0; $i -lt $Accounts.Count; $i++) {
         $ServerName = if ($Accounts[$i].Server) { $Accounts[$i].Server.ToUpper() } else { "未設定" }
+        $WinUserDisplay = if ($Accounts[$i].WindowsUser) { " @$($Accounts[$i].WindowsUser)" } else { "" }
         Write-Host "  [$($i + 1)] " -NoNewline -ForegroundColor White
         Write-Host "$ServerName" -NoNewline -ForegroundColor Cyan
-        Write-Host " - $($Accounts[$i].DisplayName)" -ForegroundColor Yellow
+        Write-Host " - $($Accounts[$i].DisplayName)" -NoNewline -ForegroundColor Yellow
+        if ($WinUserDisplay) {
+            Write-Host "$WinUserDisplay" -ForegroundColor Magenta
+        } else {
+            Write-Host ""
+        }
     }
 
     # 顯示無效帳號警告
@@ -1081,7 +1118,7 @@ do {
             Write-Host "開始啟動所有有效帳號..." -ForegroundColor Green
             for ($i = 0; $i -lt $Accounts.Count; $i++) {
                 $Account = $Accounts[$i]
-                Start-D2R -Username $Account.Username -Password $Account.Password -DisplayName $Account.DisplayName -Server $Account.Server -LaunchArgs $Account.LaunchArgs -D2RGamePath $Account.D2RGamePath -AccountNumber ($i + 1)
+                Start-D2R -Username $Account.Username -Password $Account.Password -DisplayName $Account.DisplayName -Server $Account.Server -LaunchArgs $Account.LaunchArgs -D2RGamePath $Account.D2RGamePath -WindowsUser $Account.WindowsUser -WindowsPassword $Account.WindowsPassword -AccountNumber ($i + 1)
             }
             Write-Host ""
             Write-Host "所有有效帳號已啟動完畢！" -ForegroundColor Green
@@ -1114,7 +1151,7 @@ do {
                         $AccountIndex = $AccNum - 1
                         if ($AccountIndex -ge 0 -and $AccountIndex -lt $Accounts.Count) {
                             $Account = $Accounts[$AccountIndex]
-                            Start-D2R -Username $Account.Username -Password $Account.Password -DisplayName $Account.DisplayName -Server $Account.Server -LaunchArgs $Account.LaunchArgs -D2RGamePath $Account.D2RGamePath -AccountNumber $AccNum
+                            Start-D2R -Username $Account.Username -Password $Account.Password -DisplayName $Account.DisplayName -Server $Account.Server -LaunchArgs $Account.LaunchArgs -D2RGamePath $Account.D2RGamePath -WindowsUser $Account.WindowsUser -WindowsPassword $Account.WindowsPassword -AccountNumber $AccNum
                         }
                     }
                     Write-Host ""
@@ -1130,7 +1167,7 @@ do {
             elseif ($Choice -match '^\d+$' -and [int]$Choice -ge 1 -and [int]$Choice -le $Accounts.Count) {
                 $AccountIndex = [int]$Choice - 1
                 $SelectedAccount = $Accounts[$AccountIndex]
-                Start-D2R -Username $SelectedAccount.Username -Password $SelectedAccount.Password -DisplayName $SelectedAccount.DisplayName -Server $SelectedAccount.Server -LaunchArgs $SelectedAccount.LaunchArgs -D2RGamePath $SelectedAccount.D2RGamePath -AccountNumber ([int]$Choice)
+                Start-D2R -Username $SelectedAccount.Username -Password $SelectedAccount.Password -DisplayName $SelectedAccount.DisplayName -Server $SelectedAccount.Server -LaunchArgs $SelectedAccount.LaunchArgs -D2RGamePath $SelectedAccount.D2RGamePath -WindowsUser $SelectedAccount.WindowsUser -WindowsPassword $SelectedAccount.WindowsPassword -AccountNumber ([int]$Choice)
                 Write-Host ""
                 Wait-AndReturn
             }

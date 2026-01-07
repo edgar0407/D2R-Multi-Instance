@@ -1,10 +1,10 @@
 @echo off
 :: ==========================================
-:: D2R Multi-Instance Launcher v1.0.1 - Debug Mode
+:: D2R Multi-Instance Launcher v1.1.0 - Debug Mode
 :: ==========================================
 
 echo ========================================
-echo   D2R Launcher v1.0.1 - DEBUG MODE
+echo   D2R Launcher v1.1.0 - DEBUG MODE
 echo ========================================
 echo.
 echo Debug mode shows additional diagnostics

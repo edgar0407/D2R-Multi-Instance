@@ -8,8 +8,8 @@
 ## 📋 專案概述
 
 **專案名稱**: D2R Multi-Instance Launcher (D2R 多開啟動器)
-**當前版本**: v1.0.1
-**最後更新**: 2025-12-21
+**當前版本**: v1.1.0
+**最後更新**: 2025-12-27
 **開發語言**: PowerShell 5.0+
 **目標平台**: Windows (繁體中文環境)
 
@@ -137,6 +137,8 @@ Password=password                   # 必填
 DisplayName=暱稱                    # 選填（留空使用 Username）
 Server=kr                           # 選填（留空使用 DefaultServer）
 LaunchArgs=-mod YourMod -txt -w     # 選填（留空使用 DefaultLaunchArgs）
+WindowsUser=D2User                  # 選填（Windows 本機用戶，用於獨立設置）
+WindowsPassword=win_password        # 選填（Windows 本機用戶密碼）
 
 [Group1]
 DisplayName=全部帳號               # 群組顯示名稱
@@ -302,7 +304,19 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 
 ## 🚀 版本歷史重點
 
-### v1.0.1 (2025-12-21) - 當前版本
+### v1.1.0 (2025-12-27) - 當前版本
+
+**主要新增**:
+- ✨ 支援以不同 Windows 本機用戶啟動遊戲（WindowsUser 參數）
+- ✨ 每個帳號可使用獨立的遊戲設置（Settings.json）
+- ✨ 選單顯示 Windows 用戶名稱（紫色 @用戶名）
+
+**技術細節**:
+- 使用 `Start-Process -Credential` 實現用戶切換
+- 每個帳號新增 `WindowsUser` 和 `WindowsPassword` 欄位
+- 不同用戶的設置檔位於各自的 `C:\Users\<用戶>\Saved Games\Diablo II Resurrected\`
+
+### v1.0.1 (2025-12-21)
 
 **修復問題**:
 - 🐛 視窗檢測無法找到已設定自訂標題的 D2R 視窗
@@ -470,4 +484,4 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 
 **文件最後更新**: 2025-12-21
 **文件版本**: 1.4
-**對應專案版本**: v1.0.1
+**對應專案版本**: v1.1.0

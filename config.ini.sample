@@ -12,9 +12,9 @@
 #
 # 範例 (用其中一種就好)：
 #   相對路徑: Handle\handle64.exe
-#   (備註：
-#        1) 代表D2R_Launcher.ps1跟Handle這個目錄在同一層
-#        2) handle64.exe等3個檔案在Handle目錄下
+#   備註：
+#        1, 代表D2R_Launcher.ps1跟Handle這個目錄在同一層
+#        2, handle64.exe等3個檔案在Handle目錄下
 #
 #   絕對路徑: E:\Tools\Handle\handle64.exe
 #   中文路徑: D:\工具\Handle\handle64.exe
@@ -27,9 +27,7 @@ HandleExePath=Handle\handle64.exe
 # Handle.exe 輸出的臨時檔案路徑（選填，通常不需修改）
 TempFilePath=Handle\handles_temp.txt
 
-# D2R 遊戲執行檔路徑（已移至 [General] 區塊）
-# 為了向後相容，此設定仍然有效，但建議使用 [General] 區塊的 DefaultD2RGamePath
-# D2RGamePath=D:\Diablo II Resurrected\D2R.exe
+
 
 # ==========================================
 # 第二區：一般參數設定
@@ -63,7 +61,7 @@ DefaultServer=kr
 # 預設啟動參數 - 當帳號未指定啟動參數時使用
 DefaultLaunchArgs=-mod LiYuiMod -txt -w
 
-# 遊戲視窗初始化等待時間 (秒)
+# 遊戲視窗初始化等待時間 (秒, 如果第2個窗來不及開出來, 試著加大到10試試)
 WindowInitDelay=3
 
 # 操作完成後自動返回選單的倒數秒數 (設為 0 則需手動按鍵)
@@ -83,6 +81,8 @@ LogRetentionDays=30
 #   * Server（伺服器，留空則使用 DefaultServer）
 #   * DisplayName（顯示名稱，留空則使用帳號）
 #   * LaunchArgs（啟動參數，留空則使用 DefaultLaunchArgs）
+#   * WindowsUser（Windows 本機用戶名，用於獨立遊戲設置）
+#   * WindowsPassword（Windows 本機用戶密碼）
 # - 資料不完整的帳號會被跳過，並在啟動時顯示警告
 #
 # 範例 1：最簡單（僅帳密，其他使用預設值）
@@ -99,14 +99,23 @@ LogRetentionDays=30
 #   D2RGamePath=D:\CustomPath\D2R.exe
 #   Server=us
 #   LaunchArgs=-mod CustomMod -txt -w -ns
+#
+# 範例 3：使用不同 Windows 用戶（獨立遊戲設置）
+#         3.1 帳要先建立並登入過一次
+#         3.2 在帳、密填在帳號區的WindowsUser, WindowsPassword
+#   [Account3]
+#   Username=another@example.com
+#   Password=another_password
+#   DisplayName=獨立設置帳號
+#   WindowsUser=your_windows_local_account_name
+#   WindowsPassword=your_windows_local_account_password
 # ==========================================
 
 [Account1]
 Username=your_email_1@example.com
 Password=your_password_1
 DisplayName=帳號一
-Server=kr
-LaunchArgs=-mod LiYuiMod -txt -w
+
 
 [Account2]
 Username=your_email_2@example.com
@@ -140,9 +149,9 @@ LaunchArgs=-mod LiYuiMod -txt -w
 # ==========================================
 
 # [Group1]
-# DisplayName=全部帳號
+# DisplayName=群組一
 # Accounts=1,2
 
 # [Group2]
-# DisplayName=僅帳號一
+# DisplayName=群組二
 # Accounts=1

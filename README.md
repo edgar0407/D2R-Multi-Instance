@@ -1,4 +1,4 @@
-# D2R 多開工具 (v1.0.1)
+# D2R 多開工具 (v1.1.0)
 
 > **使用者文件**：快速了解如何使用本工具
 > 技術細節請參閱 [CLAUDE.md](./CLAUDE.md) | 版本歷程請參閱 [CHANGELOG.md](./CHANGELOG.md)
@@ -43,7 +43,16 @@ D2RGamePath=  # 可留空使用 DefaultD2RGamePath（例如用於 PTR 測試服�
 Server=kr  # 可留空使用 DefaultServer
 LaunchArgs=-mod YourMod -txt -w  # 可留空使用 DefaultLaunchArgs
 
-# 新增更多帳號，依序編號 Account2, Account3...
+# 使用不同 Windows 用戶啟動（可選，用於獨立遊戲設置）
+[Account2]
+Username=second@example.com
+Password=second_password
+DisplayName=獨立設置帳號
+WindowsUser=D2User  # Windows 本機用戶名
+WindowsPassword=windows_password  # Windows 本機密碼
+# 此帳號會使用 C:\Users\D2User\Saved Games\... 的設置檔
+
+# 新增更多帳號，依序編號 Account3, Account4...
 
 # 群組設定 (選填)
 [Group1]
@@ -77,6 +86,7 @@ Accounts=1,2,3  # 要啟動的帳號編號，用逗號分隔
 - ✅ **外部設定檔**：使用 `config.ini` 管理所有設定，更新方便
 - ✅ **自動登入**：遊戲啟動後自動填入帳號密碼
 - ✅ **多開支援**：自動關閉實例檢查，可同時運行多個帳號
+- ✅ **獨立遊戲設置**：支援不同 Windows 用戶，每帳號可用獨立 Settings.json
 - ✅ **視窗標題自訂**：每個遊戲視窗顯示「D2R: 編號 - 顯示名稱」，方便識別
 - ✅ **互動式選單**：選擇單一帳號、群組或啟動全部
 - ✅ **群組功能**：自訂帳號組合，一鍵啟動特定帳號群組

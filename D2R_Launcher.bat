@@ -1,10 +1,10 @@
 @echo off
 :: ==========================================
-:: D2R Multi-Instance Launcher v1.0.1
+:: D2R Multi-Instance Launcher v1.1.0
 :: ==========================================
 
 echo ========================================
-echo   D2R Multi-Instance Launcher v1.0.1
+echo   D2R Multi-Instance Launcher v1.1.0
 echo ========================================
 echo.
 

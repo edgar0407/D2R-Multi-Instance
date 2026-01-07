@@ -5,6 +5,33 @@
 
 ---
 
+## [v1.1.0] - 2025-12-27
+
+新增 Windows 用戶切換功能，讓每個帳號可以使用獨立的遊戲設置檔。
+
+### 新增功能
+- Add - 支援以不同 Windows 本機用戶啟動遊戲（WindowsUser 參數）
+- Add - 每個帳號可使用獨立的遊戲設置（Settings.json）
+- Add - 選單顯示 Windows 用戶名稱供識別（紫色 @用戶名）
+- Add - 啟動時顯示使用的 Windows 用戶
+
+### 使用場景
+- 主帳號使用全螢幕高畫質設置
+- 副帳號使用視窗模式低畫質設置
+- 不同帳號使用不同的按鍵配置
+
+### 設定方式
+```ini
+[Account1]
+Username=your_email@example.com
+Password=your_password
+DisplayName=帳號名稱
+WindowsUser=D2User           # Windows 本機用戶名
+WindowsPassword=user_pwd     # Windows 本機用戶密碼
+```
+
+---
+
 ## [v1.0.1] - 2025-12-21
 
 修復多開時視窗標題設定失敗的問題。
