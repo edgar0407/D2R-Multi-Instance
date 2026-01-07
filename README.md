@@ -39,7 +39,7 @@ WindowInitDelay=3
 Username=your_email@example.com
 Password=your_password
 DisplayName=帳號暱稱
-D2RGamePath=  # 可留空使用 DefaultD2RGamePath（例如用於 PTR 測試服）
+D2RGamePath=  # 可留空使用 DefaultD2RGamePath（如 D:\Diablo II Resurrected\D2R.exe）
 Server=kr  # 可留空使用 DefaultServer
 LaunchArgs=-mod YourMod -txt -w  # 可留空使用 DefaultLaunchArgs
 
